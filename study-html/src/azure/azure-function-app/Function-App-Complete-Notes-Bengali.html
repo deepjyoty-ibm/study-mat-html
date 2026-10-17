@@ -333,6 +333,230 @@ External World
     </tbody>
   </table>
   <div class="callout callout-yellow"><div class="callout-label">Think About It</div><p><code>AuthorizationLevel.Function</code> + Function Key কি সত্যিই "secure"? Key হলো static secret — URL বা header-এ থাকে। কেউ request capture করলে key পেয়ে যাবে। Production-এ sensitive data-র জন্য <strong>Entra ID + JWT</strong> ব্যবহার করা উচিত — token short-lived, identity-bound, আর claims থাকে।</p></div>
+
+  <!-- ── FUNCTION KEY DEEP DIVE (Bengali) ── -->
+  <h3>Function Keys — সম্পূর্ণ চিত্র</h3>
+
+  <h4>তিন ধরনের Key</h4>
+  <table class="compare-table">
+    <thead><tr><th>Key Type</th><th>Scope</th><th>কাজ করে</th><th>কখন ব্যবহার</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Function Key</strong></td>
+        <td>শুধুমাত্র একটি নির্দিষ্ট Function</td>
+        <td><code>AuthorizationLevel.Function</code> বা <code>.Admin</code></td>
+        <td>একটি নির্দিষ্ট caller-কে ঠিক একটি Function endpoint-এ access দাও</td>
+      </tr>
+      <tr>
+        <td><strong>Host Key</strong></td>
+        <td>Function App-এর সব Functions</td>
+        <td><code>AuthorizationLevel.Function</code> বা <code>.Admin</code></td>
+        <td>একটি caller-কে একটি key দিয়ে App-এর সব Function access দাও</td>
+      </tr>
+      <tr>
+        <td><strong>Master Key (<code>_master</code>)</strong></td>
+        <td>সব Functions + Admin REST API</td>
+        <td>শুধু <code>AuthorizationLevel.Admin</code></td>
+        <td>শুধুমাত্র management tooling। কখনো share করো না। Application code-এ কখনো ব্যবহার করো না।</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-red">
+    <div class="callout-label">Warning — Master Key</div>
+    <p><strong>Master Key</strong> তোমার পুরো Function App-এ administrative access দেয় — Azure Functions Admin API দিয়ে Functions list, modify, delete করার ক্ষমতাসহ। এটা rotate করা যায় না, শুধু regenerate করা যায়। <strong>Client code-এ কখনো expose করো না, App Settings-এ store করো না, log করো না।</strong> Leak হলে Azure Portal থেকে অবিলম্বে regenerate করো।</p>
+  </div>
+
+  <h4>Step 1 — Function Key কীভাবে Generate / খুঁজে পাবে</h4>
+  <div class="diagram">
+    <div class="diagram-title">Azure Portal-এ Function Key Generate করার জায়গা</div>
+    <pre>
+Azure Portal
+  └── তোমার Function App
+        └── Functions
+              └── নির্দিষ্ট Function (যেমন "GetOrder")
+                    └── Function Keys  ← left nav
+                          ├── default  (auto-created Function Key)
+                          ├── + Add    (named key তৈরি করো — যেমন "service-a-key")
+                          └── Regenerate / Delete
+
+  অথবা Function App level-এ (Host Keys):
+  └── তোমার Function App
+        └── App Keys  ← left nav
+              ├── default  (auto-created Host Key)
+              └── _master  (Master Key — Admin only)
+    </pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">Azure CLI — Function Key তৈরি ও List করো</span>
+      <span class="lang-badge">CLI</span>
+    </div>
+    <pre><code><span class="cm"># একটি নির্দিষ্ট Function-এর সব key list করো</span>
+az functionapp function keys list \
+  --name my-function-app \
+  --resource-group my-rg \
+  --function-name GetOrder
+
+<span class="cm"># নির্দিষ্ট Function-এর জন্য named key তৈরি করো</span>
+az functionapp function keys set \
+  --name my-function-app \
+  --resource-group my-rg \
+  --function-name GetOrder \
+  --key-name service-a-key \
+  --key-value ""        <span class="cm"># empty রাখো → Azure নিজে secure random value generate করবে</span>
+
+<span class="cm"># Host-level keys list করো (সব Function-এ কাজ করে)</span>
+az functionapp keys list \
+  --name my-function-app \
+  --resource-group my-rg</code></pre>
+  </div>
+
+  <div class="callout callout-green">
+    <div class="callout-label">Best Practice — প্রতিটি Caller-এর জন্য আলাদা Named Key</div>
+    <p>সবাইকে একই <code>default</code> key দিও না। প্রতিটি caller-এর জন্য <strong>আলাদা named key</strong> তৈরি করো (যেমন <code>service-a-key</code>, <code>service-b-key</code>)। Service A compromise হলে শুধু তার key regenerate বা delete করো — Service B-তে কোনো প্রভাব পড়বে না। এটাই Function Keys-এ least privilege principle।</p>
+  </div>
+
+  <h4>Step 2 — Client কীভাবে Key-টি Securely পাবে</h4>
+  <div class="diagram">
+    <div class="diagram-title">Secure Key Distribution Flow</div>
+    <pre>
+তুমি (admin / CI pipeline)
+  │
+  │  Azure Portal বা CLI দিয়ে key generate করো
+  ▼
+Azure Function App key internally store করে
+  │
+  │  তুমি key value copy করো
+  ▼
+Azure Key Vault  ← এখানে secret হিসেবে store করো
+  │              (যেমন secret name: "GetOrder-ServiceA-FunctionKey")
+  │
+  │  Caller service Managed Identity দিয়ে secret পড়ে
+  ▼
+Caller Service (Service A)
+  │  Startup-এ Key Vault থেকে key পড়ে → memory-তে রাখে
+  │  Source code-এ কখনো hardcode করে না
+  ▼
+প্রতিটি request-এ key দিয়ে Function call করে
+    </pre>
+  </div>
+
+  <div class="callout callout-orange">
+    <div class="callout-label">Important — Caller Side-এ Key কোথায় রাখবে না</div>
+    <ul>
+      <li>❌ <strong>Source code-এ hardcode করো না</strong> — git history-তে চিরকালের জন্য থেকে যাবে</li>
+      <li>❌ <strong>Commit হওয়া config file-এ রেখো না</strong> (যেমন <code>appsettings.json</code>)</li>
+      <li>❌ <strong>Log করো না</strong> — request log URL parameter capture করে, APM tool-এ header leak হতে পারে</li>
+      <li>✅ <strong>Key Vault-এ secret হিসেবে store করো</strong>। Caller runtime-এ Managed Identity দিয়ে পড়বে</li>
+      <li>✅ <strong>App Setting ব্যবহার করো</strong> caller side-এ — কিন্তু সেই App Setting-এর value হবে Key Vault reference, raw value নয়</li>
+    </ul>
+  </div>
+
+  <h4>Step 3 — Call করার সময় Key কীভাবে Pass করবে</h4>
+  <p>Function Key pass করার দুটো উপায়। দুটোই কাজ করে, কিন্তু production-এ <strong>header method strongly preferred</strong>।</p>
+
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">Method 1 — Query String (Production-এ সুপারিশ করা হয় না)</span>
+      <span class="lang-badge">HTTP</span>
+    </div>
+    <pre><code><span class="cm"># Key URL-এ দেখা যায় — browser history, server log, proxy log-এ থেকে যায়</span>
+GET https://my-function-app.azurewebsites.net/api/orders/123?code=abc123XYZfunctionKey==
+
+<span class="cm"># curl উদাহরণ</span>
+curl "https://my-function-app.azurewebsites.net/api/orders/123?code=abc123XYZfunctionKey=="</code></pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">Method 2 — x-functions-key Header (সুপারিশকৃত)</span>
+      <span class="lang-badge">HTTP</span>
+    </div>
+    <pre><code><span class="cm"># Key header-এ — URL-এ নেই, browser history-তে নেই</span>
+GET https://my-function-app.azurewebsites.net/api/orders/123
+x-functions-key: abc123XYZfunctionKey==
+
+<span class="cm"># curl উদাহরণ</span>
+curl -H "x-functions-key: abc123XYZfunctionKey==" \
+     https://my-function-app.azurewebsites.net/api/orders/123</code></pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">C# HttpClient — অন্য Service থেকে Function Call করা</span>
+      <span class="lang-badge">C#</span>
+    </div>
+    <pre><code><span class="kw">public class</span> <span class="tp">OrderServiceClient</span>
+{
+    <span class="kw">private readonly</span> <span class="tp">HttpClient</span> <span class="vr">_httpClient</span>;
+    <span class="kw">private readonly</span> <span class="tp">string</span> <span class="vr">_functionKey</span>;
+
+    <span class="cm">// Key IOptions থেকে inject হয় (App Settings-এর Key Vault reference থেকে পড়া)</span>
+    <span class="kw">public</span> <span class="mt">OrderServiceClient</span>(<span class="tp">HttpClient</span> <span class="vr">httpClient</span>, <span class="tp">IOptions</span>&lt;<span class="tp">ApiOptions</span>&gt; <span class="vr">options</span>)
+    {
+        <span class="vr">_httpClient</span> = <span class="vr">httpClient</span>;
+        <span class="vr">_functionKey</span> = <span class="vr">options</span>.Value.GetOrderFunctionKey; <span class="cm">// Key Vault → App Setting</span>
+    }
+
+    <span class="kw">public async</span> <span class="tp">Task</span>&lt;<span class="tp">Order</span>?&gt; <span class="mt">GetOrderAsync</span>(<span class="tp">string</span> <span class="vr">orderId</span>)
+    {
+        <span class="cm">// x-functions-key header ব্যবহার করো — key URL-এ থাকে না</span>
+        <span class="kw">using var</span> <span class="vr">request</span> = <span class="kw">new</span> <span class="tp">HttpRequestMessage</span>(
+            <span class="tp">HttpMethod</span>.Get,
+            <span class="st">$"https://my-function-app.azurewebsites.net/api/orders/{orderId}"</span>);
+
+        <span class="vr">request</span>.Headers.<span class="mt">Add</span>(<span class="st">"x-functions-key"</span>, <span class="vr">_functionKey</span>);
+
+        <span class="kw">var</span> <span class="vr">response</span> = <span class="kw">await</span> <span class="vr">_httpClient</span>.<span class="mt">SendAsync</span>(<span class="vr">request</span>);
+        <span class="vr">response</span>.<span class="mt">EnsureSuccessStatusCode</span>();
+        <span class="kw">return await</span> <span class="vr">response</span>.Content.<span class="mt">ReadFromJsonAsync</span>&lt;<span class="tp">Order</span>&gt;();
+    }
+}</code></pre>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Complete Function Key Flow — শুরু থেকে শেষ পর্যন্ত</div>
+    <pre>
+[Admin / CI Pipeline]
+  Portal বা CLI দিয়ে "service-a-key" named key generate করো
+  → Key value Azure Key Vault-এ store করো (secret: "GetOrder-ServiceA-Key")
+  → Service A-এর Managed Identity-কে সেই secret-এ "Key Vault Secrets User" role দাও
+
+[Service A — startup]
+  DefaultAzureCredential → Key Vault secret পড়ে → "service-a-key" value memory-তে রাখে
+  (অথবা: App Setting with Key Vault reference → Azure env var হিসেবে resolve করে)
+
+[Service A — runtime, Function call করার সময়]
+  HTTP GET https://my-function-app.azurewebsites.net/api/orders/123
+  Header: x-functions-key: &lt;key value&gt;
+          ↑ URL-এ নেই
+
+[Azure Functions Host — request পায়]
+  1. x-functions-key header পড়ে
+  2. Internal key store-এ key খোঁজে
+  3. Key match করলে → তোমার Function code-এ forward করে
+  4. Key নেই বা ভুল key → HTTP 401 Unauthorized return করে
+  5. তোমার Function code চলে (key দেখে না)
+    </pre>
+  </div>
+
+  <div class="callout callout-purple">
+    <div class="callout-label">Architecture — Function Key বনাম Entra ID: কখন কোনটা</div>
+    <table class="compare-table">
+      <thead><tr><th></th><th>Function Key</th><th>Entra ID + JWT</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Identity</strong></td><td>নেই — শুধু shared secret</td><td>পূর্ণ identity (user/app, tenant, roles)</td></tr>
+        <tr><td><strong>Expiry</strong></td><td>কখনো expire হয় না (regenerate না করলে)</td><td>Short-lived (~১ ঘণ্টা), auto-refresh হয়</td></tr>
+        <tr><td><strong>Rotation</strong></td><td>Manual — সব caller-এ update করতে হয়</td><td>Automatic (token refresh)</td></tr>
+        <tr><td><strong>Audit trail</strong></td><td>নেই — কে call করেছে বলা যায় না</td><td>আছে — exact identity + claims log-এ থাকে</td></tr>
+        <tr><td><strong>Best for</strong></td><td>Simple internal service-to-service, low risk</td><td>User-facing API, sensitive data, compliance</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <!-- ── END FUNCTION KEY DEEP DIVE (Bengali) ── -->
+
   <div class="code-block">
     <div class="code-block-header"><span class="file-name">JWT Validation — Middleware বা Function-এ</span><span class="lang-badge">C#</span></div>
     <pre><code><span class="cm">// AuthorizationLevel.Anonymous রাখো — JWT নিজে validate করো</span>
