@@ -1,0 +1,2393 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Azure Function App – সম্পূর্ণ Interview Notes (বাংলা)</title>
+<link rel="stylesheet" href="../../../assets/css/blue-theme.css" />
+</head>
+<body>
+<div class="page-wrapper">
+
+<!-- COVER BANNER -->
+<div class="cover-banner" id="top">
+  <h1>Azure Function App</h1>
+  <p class="sub">সম্পূর্ণ Interview &amp; Study Notes · .NET Isolated Worker Model · বাংলায়</p>
+  <div class="badge">15 Chapters · 49 Questions · Production-Ready</div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<nav class="toc" id="toc">
+  <h2>সূচিপত্র (Table of Contents)</h2>
+  <ol>
+    <li><a href="#ch01">Ch 01 – Azure Functions Fundamentals</a> (Q1–Q2)</li>
+    <li><a href="#ch02">Ch 02 – Azure Function Triggers</a> (Q3–Q11)</li>
+    <li><a href="#ch03">Ch 03 – .NET Isolated Worker Model</a> (Q12–Q14)</li>
+    <li><a href="#ch04">Ch 04 – Configuration</a> (Q15)</li>
+    <li><a href="#ch05">Ch 05 – Identity, Credentials &amp; Secrets</a> (Q16–Q17)</li>
+    <li><a href="#ch06">Ch 06 – CORS &amp; API Security</a> (Q18)</li>
+    <li><a href="#ch07">Ch 07 – Hosting, Scaling &amp; Runtime</a> (Q19–Q21)</li>
+    <li><a href="#ch08">Ch 08 – Networking</a> (Q22–Q23)</li>
+    <li><a href="#ch09">Ch 09 – Logging &amp; Monitoring</a> (Q24)</li>
+    <li><a href="#ch10">Ch 10 – Deployment</a> (Q25)</li>
+    <li><a href="#ch11">Ch 11 – Production-Ready Function App</a> (Q26)</li>
+    <li><a href="#ch12">Ch 12 – Tricky Interview Questions</a> (Q27–Q36)</li>
+    <li><a href="#ch13">Ch 13 – Scenario-Based Questions</a> (Q37–Q43)</li>
+    <li><a href="#ch14">Ch 14 – Architecture-Level Questions</a> (Q44–Q48)</li>
+    <li><a href="#ch15">Ch 15 – Final Revision Question</a> (Q49)</li>
+    <li><a href="#nbr">🌙 Night-Before Interview Revision</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================
+     CHAPTER 01 – AZURE FUNCTIONS FUNDAMENTALS
+     ============================================================ -->
+<section class="chapter" id="ch01">
+  <div class="chapter-header">
+    <div class="ch-num">01</div>
+    <div>
+      <div class="ch-title">Azure Functions Fundamentals</div>
+      <div class="ch-sub">Serverless কী? Function App কীভাবে কাজ করে? কখন ব্যবহার করবে?</div>
+    </div>
+  </div>
+
+  <!-- Q1 -->
+  <div class="question-block">
+    <div class="q-label">Q1</div>
+    <div class="q-text">Azure Functions &amp; Function App — Complete Fundamentals</div>
+  </div>
+
+  <h3>Azure Functions কেন তৈরি হলো — সমস্যাটা কোথায় ছিল?</h3>
+  <p>ধর তুমি একটা e-commerce application চালাচ্ছ। রাত ১১টায় প্রতিদিন sales report তৈরি করতে হয়। বাকি ২৩ ঘণ্টা কিছুই করার নেই। কিন্তু traditional Web API বা App Service-এ VM সারাক্ষণ চলতে থাকে — <strong>২৪ ঘণ্টাই পয়সা যায়</strong> — এমনকি যখন কোনো কাজ নেই তখনও।</p>
+  <p>আবার ধর, কোনো user যখনই Blob Storage-এ image upload করে, সেটা process করতে হবে। দিনে ৫টা হতে পারে, আবার ৫০,০০০টাও হতে পারে। Traditional server-এ সবচেয়ে বেশি load-এর কথা ভেবে capacity রাখতে হয় — বেশিরভাগ সময় সেটা idle পড়ে থাকে।</p>
+  <p><strong>Azure Functions</strong> ঠিক এই দুটো সমস্যা সমাধান করতে এসেছে: <em>শুধু যখন code চলে তখনই পয়সা দাও</em>, আর <em>infrastructure নিজেই manage করুক।</em></p>
+
+  <div class="callout callout-blue">
+    <div class="callout-label">Core Concept</div>
+    <p><strong>Azure Functions</strong> হলো একটা serverless compute service। তুমি শুধু একটা ছোট্ট focused code লিখবে (সেটাই Function)। Azure নিজেই host, runtime, infrastructure, scaling, আর OS সব সামলাবে। তোমার code যখন actually execute হবে, শুধু তখনই bill আসবে।</p>
+  </div>
+
+  <h3>Function vs Function App — এই দুটো গুলিয়ে ফেলো না</h3>
+  <p>Interview-এ এটা সবচেয়ে বেশি গুলিয়ে যায়। সহজ করে ভাব:</p>
+
+  <div class="grid-2">
+    <div class="callout callout-blue">
+      <div class="callout-label">Function App</div>
+      <p>এটা <strong>deployment unit</strong> — মানে Azure-এ যে resource তুমি deploy করো। এটা একটা container যেটার ভেতরে এক বা একাধিক Function থাকে। একই Function App-এর সব Function একই hosting plan, runtime version, configuration, App Settings, Managed Identity, আর deployment share করে।</p>
+    </div>
+    <div class="callout callout-green">
+      <div class="callout-label">Function</div>
+      <p>এটা একটা <strong>individual code unit</strong> — একটাই trigger থাকে। C#-এ একটা class যার একটা method-এ <code>[Function("Name")]</code> attribute লাগানো থাকে। এটা একটাই কাজ করে: একটা trigger-এ react করে, optionally binding ব্যবহার করে।</p>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Function App Structure</div>
+    <pre>
+Function App (Azure Resource – deployment unit)
+├── App Settings / Configuration         ← সব Functions share করে
+├── Managed Identity                     ← সব Functions share করে
+├── Hosting Plan (Consumption/Premium)   ← সব Functions share করে
+│
+├── Function: ProcessOrder               ← HTTP Trigger
+├── Function: SendNightlyReport          ← Timer Trigger
+├── Function: ProcessUploadedImage       ← Blob Trigger
+└── Function: HandlePaymentEvent         ← Service Bus Trigger
+    </pre>
+  </div>
+
+  <div class="callout callout-orange">
+    <div class="callout-label">Interview Tip</div>
+    <p>"Function App" ≠ "Function"। Function App হলো যেটা তুমি Azure-এ deploy করো। Functions হলো তার ভেতরের individual executable unit। একই Function App-এর সব Functions configuration, secrets, আর identity share করে — এরা কিন্তু আলাদা independent application নয়।</p>
+  </div>
+
+  <h3>Azure Functions কীভাবে কাজ করে — Event-Driven Model</h3>
+  <p>প্রতিটা Function শুরু হয় একটা <strong>Trigger</strong> দিয়ে। Trigger হলো সেই জিনিস যেটা Function-কে চালু করে। Trigger ছাড়া Function কখনো execute হয় না।</p>
+
+  <div class="flow">
+    <div class="flow-step"><div class="flow-box">Event ঘটে (HTTP request / Timer / Message / Blob upload)</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Azure Functions Runtime Trigger detect করে</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Worker Process allocate হয় (অথবা warm থাকলে reuse হয়)</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">তোমার Function method execute হয়</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Result return / Output binding লেখা / Message complete</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Worker pool-এ ফিরে যায় (অথবা idle থাকলে scale down)</div></div>
+  </div>
+
+  <h3>Serverless Computing — "Serverless" মানে কী আসলে?</h3>
+  <p>Serverless মানে server নেই — এটা ভুল ধারণা। মানে হলো <em>তুমি server manage করো না</em>। Azure নিজেই provision করে, patch করে, scale করে, আর শুধু actual execution time-এর জন্য bill করে।</p>
+
+  <div class="callout callout-gray">
+    <div class="callout-label">Supporting Explanation</div>
+    <ul>
+      <li><strong>No server management</strong> — Azure নিজেই OS, runtime, patching handle করে।</li>
+      <li><strong>Automatic scaling</strong> — demand বাড়লে Azure scale out করে, idle থাকলে zero-তে নামিয়ে দেয় (Consumption plan)।</li>
+      <li><strong>Pay-per-execution</strong> — execution count আর consumed memory/time অনুযায়ী bill হয়, uptime অনুযায়ী নয়।</li>
+      <li><strong>Stateless by design</strong> — প্রতিটা function execution independent। দুটো invocation-এর মধ্যে কোনো guaranteed shared memory নেই।</li>
+    </ul>
+  </div>
+
+  <h3>Azure Functions কখন ব্যবহার করবে</h3>
+  <ul>
+    <li><strong>Event-driven tasks</strong> — message process করা, file upload-এ react করা, webhook handle করা।</li>
+    <li><strong>Scheduled jobs</strong> — রাতের report generation, data cleanup, token refresh।</li>
+    <li><strong>Lightweight HTTP APIs</strong> — microservice endpoint, internal API।</li>
+    <li><strong>Glue code / integration</strong> — এক service থেকে আরেক service-এ data পাঠানো (যেমন Event Grid event receive করে Cosmos DB-তে লেখা)।</li>
+    <li><strong>Background processing</strong> — image resizing, PDF generation, queue message-এ triggered email sending।</li>
+  </ul>
+
+  <h3>Azure Functions কখন ব্যবহার করবে না</h3>
+  <div class="callout callout-red">
+    <div class="callout-label">Warning</div>
+    <ul>
+      <li><strong>Long-running, stateful workflows</strong> — এখানে Azure Durable Functions বা Logic Apps ব্যবহার করো।</li>
+      <li><strong>Always-running, latency-sensitive APIs</strong> — Consumption plan-এ cold start সমস্যা হয়। App Service বা Premium plan বিবেচনা করো।</li>
+      <li><strong>CPU-intensive workloads</strong> — Functions-এর execution timeout আছে। বড় data processing batch compute-এ করো।</li>
+      <li><strong>Complex session management</strong> — Functions stateless। Memory-তে user session state রেখো না।</li>
+    </ul>
+  </div>
+
+  <h3>Function App vs Traditional Web API / App Service</h3>
+  <table class="compare-table">
+    <thead><tr><th>দিক</th><th>Function App (Consumption)</th><th>App Service Web API</th></tr></thead>
+    <tbody>
+      <tr><td>Billing</td><td>প্রতি execution-এ</td><td>প্রতি ঘণ্টায় (VM চলতেই থাকে)</td></tr>
+      <tr><td>Scaling</td><td>Automatic, zero পর্যন্ত নামে</td><td>Manual / auto-scale rules</td></tr>
+      <tr><td>Startup</td><td>Cold start হতে পারে</td><td>সবসময় warm</td></tr>
+      <tr><td>Execution limit</td><td>সর্বোচ্চ ১০ মিনিট (Consumption) / unlimited (Premium/Dedicated)</td><td>কোনো limit নেই</td></tr>
+      <tr><td>Management</td><td>Infrastructure প্রায় manage করতে হয় না</td><td>Runtime/config-এর উপর বেশি control</td></tr>
+      <tr><td>Best for</td><td>Event-driven, intermittent workload</td><td>Always-on, high-volume API</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="section-rule" />
+
+  <!-- Q2 -->
+  <div class="question-block">
+    <div class="q-label">Q2</div>
+    <div class="q-text">Triggers &amp; Bindings — What Are They and How Do They Work?</div>
+  </div>
+
+  <h3>সমস্যাটা কোথায়?</h3>
+  <p>Triggers আর Bindings না থাকলে প্রতিটা Function-এ infrastructure connection code লিখতে হতো — queue থেকে পড়া, Blob Storage-এ লেখা, Service Bus-এ connect করা ইত্যাদি। এতে Functions জটিল হতো আর test করা কঠিন হতো। Triggers আর Bindings এই সমস্যা সমাধান করে: <em>কী Function চালু করবে</em> এবং <em>Function কোথা থেকে data পড়বে/লিখবে</em> — এগুলো আলাদা করে দেয়।</p>
+
+  <div class="callout callout-blue">
+    <div class="callout-label">Core Concept – Trigger</div>
+    <p><strong>Trigger</strong> হলো সেটা যেটা Function execute করায়। <strong>প্রতিটা Function-এ exactly একটাই trigger থাকতে পারে।</strong> Trigger event data-টা তোমার function method-এর parameter হিসেবে দেয়। উদাহরণ: incoming HTTP request, queue-এ নতুন message, timer fire করা, blob upload হওয়া।</p>
+  </div>
+
+  <div class="callout callout-blue">
+    <div class="callout-label">Core Concept – Binding</div>
+    <p><strong>Binding</strong> হলো external service-এর সাথে declarative connection। নিজে connection code লিখতে হয় না। দুই ধরনের:</p>
+    <ul>
+      <li><strong>Input Binding</strong> — external source থেকে data পড়ে function-এর parameter হিসেবে দেয়।</li>
+      <li><strong>Output Binding</strong> — function execute হলে external destination-এ data লেখে।</li>
+    </ul>
+  </div>
+
+  <h3>মূল নিয়মগুলো</h3>
+  <ul>
+    <li>প্রতিটা Function-এ <strong>exactly একটা trigger</strong> থাকে।</li>
+    <li>একটা Function-এ <strong>শূন্য বা একাধিক input binding</strong> থাকতে পারে।</li>
+    <li>একটা Function-এ <strong>শূন্য বা একাধিক output binding</strong> থাকতে পারে।</li>
+    <li>Trigger নিজেও data deliver করতে পারে (যেমন HTTP request body, queue message)।</li>
+  </ul>
+
+  <div class="diagram">
+    <div class="diagram-title">Trigger + Binding Execution Model</div>
+    <pre>
+External World
+│
+├── HTTP Request          ──→  [HTTP Trigger]  ──→ Function executes
+├── Timer fires           ──→  [Timer Trigger] ──→ Function executes
+├── Blob uploaded         ──→  [Blob Trigger]  ──→ Function executes
+└── Queue message arrives ──→  [Queue Trigger] ──→ Function executes
+                                                        │
+                              [Input Binding]  ──→ reads from Cosmos DB / Table
+                                                        │
+                              [Output Binding] ──→ writes to Queue / Blob / Table
+    </pre>
+  </div>
+
+  <h3>C# Example — Timer Trigger with Queue Output Binding</h3>
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">Functions/ReportScheduler.cs</span>
+      <span class="lang-badge">C# · .NET Isolated</span>
+    </div>
+    <pre><code><span class="kw">using</span> Microsoft.Azure.Functions.Worker;
+<span class="kw">using</span> Microsoft.Extensions.Logging;
+
+<span class="kw">public class</span> <span class="tp">ReportScheduler</span>
+{
+    <span class="kw">private readonly</span> <span class="tp">ILogger</span>&lt;<span class="tp">ReportScheduler</span>&gt; <span class="vr">_logger</span>;
+
+    <span class="kw">public</span> <span class="mt">ReportScheduler</span>(<span class="tp">ILogger</span>&lt;<span class="tp">ReportScheduler</span>&gt; <span class="vr">logger</span>)
+        => <span class="vr">_logger</span> = <span class="vr">logger</span>;
+
+    <span class="cm">// TRIGGER: প্রতিদিন রাত ১২টায় fire করে (UTC)</span>
+    <span class="cm">// OUTPUT BINDING: storage queue-এ message লেখে</span>
+    [<span class="at">Function</span>(<span class="st">"ReportScheduler"</span>)]
+    [<span class="at">QueueOutput</span>(<span class="st">"report-jobs"</span>, Connection = <span class="st">"AzureWebJobsStorage"</span>)]
+    <span class="kw">public</span> <span class="tp">string</span> <span class="mt">Run</span>(
+        [<span class="at">TimerTrigger</span>(<span class="st">"0 0 0 * * *"</span>)] <span class="tp">TimerInfo</span> <span class="vr">timerInfo</span>)
+    {
+        <span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">"Scheduler fired. Queuing report job."</span>);
+        <span class="cm">// return value automatically queue-এ লেখা হয়</span>
+        <span class="kw">return</span> <span class="st">$"GenerateReport:{DateTime.UtcNow:yyyy-MM-dd}"</span>;
+    }
+}</code></pre>
+  </div>
+
+  <p>লক্ষ্য কর — কোনো queue connection code নেই, কোনো <code>QueueClient</code> নেই। <strong>Output binding</strong> সব কিছু declaratively handle করেছে <code>[QueueOutput]</code> attribute দিয়ে। Return value automatically <code>report-jobs</code> queue-এ চলে যায়।</p>
+
+  <div class="callout callout-yellow">
+    <div class="callout-label">Think About It</div>
+    <p>Binding ব্যবহার না করে <code>QueueServiceClient</code> inject করে manually লিখলেও হতো। কিন্তু simple case-এ binding অনেক সহজ। Complex scenario-তে (conditional write, multiple messages, per-message error handling) সেক্ষেত্রে client inject করাই ভালো। Binding হলো "easy path" — full control-এর বিকল্প নয়।</p>
+  </div>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch01</h4>
+    <ul>
+      <li><strong>Function</strong> = একটা trigger সহ individual code unit। <strong>Function App</strong> = deployment container যেটা multiple Functions ধরে।</li>
+      <li>একই Function App-এর সব Functions share করে: App Settings, Managed Identity, Hosting Plan, runtime version।</li>
+      <li>Serverless = server management নেই, pay-per-execution, auto-scale, stateless।</li>
+      <li><strong>Trigger</strong> = Function চালু করে। প্রতিটা Function-এ exactly ONE trigger।</li>
+      <li><strong>Input Binding</strong> = external source থেকে data পড়ে। <strong>Output Binding</strong> = external destination-এ data লেখে।</li>
+      <li>Bindings declarative — simple case-এ boilerplate connection code লাগে না।</li>
+      <li><strong>Interview trap</strong>: "একটা Function-এ কি multiple trigger হতে পারে?" → না। শুধু ONE।</li>
+      <li><strong>মনে রাখার মূল কথা</strong>: Function App হলো container; Function হলো single event-handler। Trigger চালু করে, bindings বাইরের জগতের সাথে connect করে।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 01 -->
+
+<!-- CH02 -->
+<section class="chapter" id="ch02">
+  <div class="chapter-header">
+    <div class="ch-num">02</div>
+    <div>
+      <div class="ch-title">Azure Function Triggers</div>
+      <div class="ch-sub">HTTP, Timer, Blob, Queue, Service Bus, Event Grid, Event Hub — কোনটা কখন?</div>
+    </div>
+  </div>
+
+  <div class="question-block"><div class="q-label">Q3</div><div class="q-text">HTTP Trigger — Complete Practical Implementation</div></div>
+  <h3>সবচেয়ে বেশি ব্যবহৃত Trigger — এবং সবচেয়ে বেশি ভুল বোঝা</h3>
+  <p>HTTP Trigger তোমার Function-কে একটা REST API endpoint বানিয়ে দেয়। কোনো client (browser, Postman, অন্য service) Function-এর URL-এ HTTP request পাঠালে trigger fire করে, তোমার code চলে।</p>
+  <div class="callout callout-blue"><div class="callout-label">Core Concept</div><p>.NET Isolated Worker model-এ HTTP Trigger <code>HttpRequestData</code> ব্যবহার করে (ASP.NET Core-এর <code>HttpRequest</code> নয়)। তুমি নিজে <code>HttpResponseData</code> তৈরি করো। কারণ Isolated Worker একটা <strong>আলাদা process</strong>-এ চলে — ASP.NET Core-এর HTTP types সরাসরি available নয়।</p></div>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Functions/OrderFunction.cs</span><span class="lang-badge">C# · .NET Isolated</span></div>
+    <pre><code><span class="kw">public class</span> <span class="tp">OrderFunction</span>
+{
+    <span class="kw">private readonly</span> <span class="tp">IOrderService</span> <span class="vr">_orderService</span>;
+    <span class="kw">private readonly</span> <span class="tp">ILogger</span>&lt;<span class="tp">OrderFunction</span>&gt; <span class="vr">_logger</span>;
+    <span class="kw">public</span> <span class="mt">OrderFunction</span>(<span class="tp">IOrderService</span> <span class="vr">s</span>, <span class="tp">ILogger</span>&lt;<span class="tp">OrderFunction</span>&gt; <span class="vr">l</span>) { <span class="vr">_orderService</span>=<span class="vr">s</span>; <span class="vr">_logger</span>=<span class="vr">l</span>; }
+
+    <span class="cm">// GET /api/orders/{id}</span>
+    [<span class="at">Function</span>(<span class="st">"GetOrder"</span>)]
+    <span class="kw">public async</span> <span class="tp">Task</span>&lt;<span class="tp">HttpResponseData</span>&gt; <span class="mt">GetOrder</span>(
+        [<span class="at">HttpTrigger</span>(<span class="tp">AuthorizationLevel</span>.Function, <span class="st">"get"</span>, Route = <span class="st">"orders/{id}"</span>)] <span class="tp">HttpRequestData</span> <span class="vr">req</span>, <span class="tp">string</span> <span class="vr">id</span>)
+    {
+        <span class="kw">var</span> <span class="vr">order</span> = <span class="kw">await</span> <span class="vr">_orderService</span>.<span class="mt">GetByIdAsync</span>(<span class="vr">id</span>);
+        <span class="kw">if</span> (<span class="vr">order</span> == <span class="kw">null</span>) { <span class="kw">var</span> <span class="vr">r</span> = <span class="vr">req</span>.<span class="mt">CreateResponse</span>(<span class="tp">HttpStatusCode</span>.NotFound); <span class="kw">await</span> <span class="vr">r</span>.<span class="mt">WriteStringAsync</span>(<span class="st">"Not found"</span>); <span class="kw">return</span> <span class="vr">r</span>; }
+        <span class="kw">var</span> <span class="vr">res</span> = <span class="vr">req</span>.<span class="mt">CreateResponse</span>(<span class="tp">HttpStatusCode</span>.OK);
+        <span class="kw">await</span> <span class="vr">res</span>.<span class="mt">WriteAsJsonAsync</span>(<span class="vr">order</span>); <span class="kw">return</span> <span class="vr">res</span>;
+    }
+
+    <span class="cm">// POST /api/orders — body থেকে manually deserialize করতে হয়</span>
+    [<span class="at">Function</span>(<span class="st">"CreateOrder"</span>)]
+    <span class="kw">public async</span> <span class="tp">Task</span>&lt;<span class="tp">HttpResponseData</span>&gt; <span class="mt">CreateOrder</span>(
+        [<span class="at">HttpTrigger</span>(<span class="tp">AuthorizationLevel</span>.Function, <span class="st">"post"</span>, Route = <span class="st">"orders"</span>)] <span class="tp">HttpRequestData</span> <span class="vr">req</span>)
+    {
+        <span class="kw">var</span> <span class="vr">body</span> = <span class="kw">await</span> <span class="vr">req</span>.<span class="mt">ReadAsStringAsync</span>();
+        <span class="kw">var</span> <span class="vr">order</span> = <span class="tp">JsonSerializer</span>.<span class="mt">Deserialize</span>&lt;<span class="tp">CreateOrderRequest</span>&gt;(<span class="vr">body</span>!);
+        <span class="kw">var</span> <span class="vr">created</span> = <span class="kw">await</span> <span class="vr">_orderService</span>.<span class="mt">CreateAsync</span>(<span class="vr">order</span>!);
+        <span class="kw">var</span> <span class="vr">res</span> = <span class="vr">req</span>.<span class="mt">CreateResponse</span>(<span class="tp">HttpStatusCode</span>.Created);
+        <span class="kw">await</span> <span class="vr">res</span>.<span class="mt">WriteAsJsonAsync</span>(<span class="vr">created</span>); <span class="kw">return</span> <span class="vr">res</span>;
+    }
+}</code></pre>
+  </div>
+  <ul>
+    <li><code>Route = "orders/{id}"</code> — route parameter <code>id</code> automatically method parameter হিসেবে inject হয়।</li>
+    <li><code>req.ReadAsStringAsync()</code> — Isolated Worker-এ body নিজে manually পড়তে হয়, কোনো automatic model binding নেই।</li>
+    <li><code>req.CreateResponse(...)</code> দিয়ে response তৈরি করো, body/headers attach করো, return করো।</li>
+  </ul>
+  <div class="callout callout-orange"><div class="callout-label">Interview Tip — Route Prefix</div><p>Default-এ সব HTTP Function-এর URL-এ <code>/api/</code> prefix থাকে। <code>Route = "orders/{id}"</code> মানে আসল URL হলো <code>/api/orders/{id}</code>। এটা <code>host.json</code>-এ <code>"extensions.http.routePrefix"</code> দিয়ে বদলানো যায়।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q4</div><div class="q-text">HTTP Trigger — Authentication &amp; Authorization</div></div>
+  <h3>HTTP Function-কে কীভাবে secure করবে?</h3>
+  <table class="compare-table">
+    <thead><tr><th>Level</th><th>মানে কী</th><th>কখন ব্যবহার</th></tr></thead>
+    <tbody>
+      <tr><td><code>Anonymous</code></td><td>কোনো key লাগে না, যে কেউ call করতে পারে</td><td>Public webhook, health check</td></tr>
+      <tr><td><code>Function</code></td><td>Function-specific API key লাগে URL বা header-এ</td><td>Service-to-service internal API</td></tr>
+      <tr><td><code>Admin</code></td><td>Host Master Key লাগে</td><td>শুধু admin/management কাজে</td></tr>
+    </tbody>
+  </table>
+  <div class="callout callout-yellow"><div class="callout-label">Think About It</div><p><code>AuthorizationLevel.Function</code> + Function Key কি সত্যিই "secure"? Key হলো static secret — URL বা header-এ থাকে। কেউ request capture করলে key পেয়ে যাবে। Production-এ sensitive data-র জন্য <strong>Entra ID + JWT</strong> ব্যবহার করা উচিত — token short-lived, identity-bound, আর claims থাকে।</p></div>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">JWT Validation — Middleware বা Function-এ</span><span class="lang-badge">C#</span></div>
+    <pre><code><span class="cm">// AuthorizationLevel.Anonymous রাখো — JWT নিজে validate করো</span>
+[<span class="at">Function</span>(<span class="st">"SecuredOrder"</span>)]
+<span class="kw">public async</span> <span class="tp">Task</span>&lt;<span class="tp">HttpResponseData</span>&gt; <span class="mt">Run</span>(
+    [<span class="at">HttpTrigger</span>(<span class="tp">AuthorizationLevel</span>.Anonymous, <span class="st">"get"</span>)] <span class="tp">HttpRequestData</span> <span class="vr">req</span>)
+{
+    <span class="cm">// 1. Authorization header থেকে Bearer token বের করো</span>
+    <span class="kw">if</span> (!<span class="vr">req</span>.Headers.<span class="mt">TryGetValues</span>(<span class="st">"Authorization"</span>, <span class="kw">out var</span> <span class="vr">vals</span>))
+        <span class="kw">return</span> <span class="vr">req</span>.<span class="mt">CreateResponse</span>(<span class="tp">HttpStatusCode</span>.Unauthorized);
+    <span class="kw">var</span> <span class="vr">token</span> = <span class="vr">vals</span>.<span class="mt">First</span>()[<span class="nm">7</span>..]; <span class="cm">// "Bearer " সরাও</span>
+
+    <span class="cm">// 2. Token validate করো (audience, issuer, signature, expiry)</span>
+    <span class="kw">var</span> <span class="vr">principal</span> = <span class="kw">await</span> <span class="vr">_tokenValidator</span>.<span class="mt">ValidateAsync</span>(<span class="vr">token</span>);
+    <span class="kw">if</span> (<span class="vr">principal</span> == <span class="kw">null</span>) <span class="kw">return</span> <span class="vr">req</span>.<span class="mt">CreateResponse</span>(<span class="tp">HttpStatusCode</span>.Unauthorized);
+
+    <span class="cm">// 3. Role/claim check করো</span>
+    <span class="kw">if</span> (!<span class="vr">principal</span>.<span class="mt">IsInRole</span>(<span class="st">"Orders.Read"</span>)) <span class="kw">return</span> <span class="vr">req</span>.<span class="mt">CreateResponse</span>(<span class="tp">HttpStatusCode</span>.Forbidden);
+
+    <span class="cm">// 4. Business logic চালাও</span>
+    <span class="kw">var</span> <span class="vr">res</span> = <span class="vr">req</span>.<span class="mt">CreateResponse</span>(<span class="tp">HttpStatusCode</span>.OK);
+    <span class="kw">await</span> <span class="vr">res</span>.<span class="mt">WriteAsJsonAsync</span>(<span class="kw">new</span> { message = <span class="st">"ok"</span> }); <span class="kw">return</span> <span class="vr">res</span>;
+}</code></pre>
+  </div>
+  <div class="callout callout-green"><div class="callout-label">Best Practice — Production Security</div><ul><li>Function-এ <code>Anonymous</code> রাখো, JWT নিজে validate করো — claims/roles-এর উপর full control পাবে।</li><li>অথবা Function App level-এ <strong>Easy Auth</strong> enable করো — Azure নিজেই token validate করবে তোমার code-এর আগেই।</li><li>Machine-to-machine internal call: Function Key ঠিক আছে। User-facing বা cross-tenant: সবসময় Entra ID + JWT।</li></ul></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q5</div><div class="q-text">Timer Trigger — Scheduled Functions</div></div>
+  <h3>Timer Trigger কখন দরকার?</h3>
+  <p>যখনই schedule-এ কিছু করতে হবে — রাতে, প্রতি ঘণ্টায়, প্রতি ৫ মিনিটে — Timer Trigger ব্যবহার করো। Azure-এর cron job বলতে পারো।</p>
+  <div class="callout callout-blue"><div class="callout-label">Core Concept — NCRONTAB Expression</div><p>Timer Trigger <strong>NCRONTAB</strong> format ব্যবহার করে (6 part — classic 5-part cron নয়): <code>{second} {minute} {hour} {day} {month} {day-of-week}</code></p><ul><li><code>0 0 * * * *</code> — প্রতি ঘণ্টার শুরুতে</li><li><code>0 */5 * * * *</code> — প্রতি ৫ মিনিটে</li><li><code>0 0 0 * * *</code> — প্রতিদিন মধ্যরাতে (UTC)</li><li><code>%TimerSchedule%</code> — App Setting থেকে পড়ে, environment অনুযায়ী আলাদা schedule রাখা যায়</li></ul></div>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Functions/NightlyReportFunction.cs</span><span class="lang-badge">C# · Timer Trigger</span></div>
+    <pre><code>[<span class="at">Function</span>(<span class="st">"NightlyReport"</span>)]
+<span class="kw">public async</span> <span class="tp">Task</span> <span class="mt">Run</span>([<span class="at">TimerTrigger</span>(<span class="st">"%NightlyReportSchedule%"</span>)] <span class="tp">TimerInfo</span> <span class="vr">timerInfo</span>)
+{
+    <span class="kw">if</span> (<span class="vr">timerInfo</span>.IsPastDue)
+        <span class="vr">_logger</span>.<span class="mt">LogWarning</span>(<span class="st">"Timer late fired! Missed execution."</span>);
+    <span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">"Next run: {Next}"</span>, <span class="vr">timerInfo</span>.ScheduleStatus?.Next);
+    <span class="kw">await</span> <span class="vr">_reportService</span>.<span class="mt">GenerateDailySalesReportAsync</span>();
+}</code></pre>
+  </div>
+  <div class="callout callout-orange"><div class="callout-label">Important — IsPastDue</div><p><code>IsPastDue</code> true হয় যখন scheduled execution miss হয়ে যায় (যেমন Function App scale-to-zero ছিল)। এটা check করে log করা উচিত। Critical job হলে skip করার সিদ্ধান্তও নিতে পারো।</p></div>
+  <div class="callout callout-yellow"><div class="callout-label">What If — Scale-Out + Timer</div><p>Function App যদি multiple instance-এ scale হয়, সব instance একসাথে timer trigger করতে চাইবে। Azure একটা blob-based distributed lock ("singleton host lease") ব্যবহার করে — শুধু একটা instance execute করে। এটা নিজে implement করতে হয় না।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q6</div><div class="q-text">Blob Trigger — React to Storage Events</div></div>
+  <h3>Blob Trigger কী সমস্যা সমাধান করে?</h3>
+  <p>User Blob Storage-এ file upload করলে automatically process করতে হবে — resize, scan, text extract। প্রতি second poll করতে চাই না। Blob Trigger container watch করে, নতুন blob পেলে Function automatically fire হয়।</p>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Functions/ImageProcessorFunction.cs</span><span class="lang-badge">C# · Blob Trigger</span></div>
+    <pre><code><span class="cm">// "uploads" container-এ blob create/update হলে fire করে</span>
+[<span class="at">Function</span>(<span class="st">"ProcessUploadedImage"</span>)]
+<span class="kw">public async</span> <span class="tp">Task</span> <span class="mt">Run</span>(
+    [<span class="at">BlobTrigger</span>(<span class="st">"uploads/{name}"</span>, Connection = <span class="st">"AzureWebJobsStorage"</span>)]
+    <span class="tp">Stream</span> <span class="vr">blobStream</span>, <span class="tp">string</span> <span class="vr">name</span>)
+{
+    <span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">"Processing: {Name}"</span>, <span class="vr">name</span>);
+    <span class="kw">await</span> <span class="vr">_imageService</span>.<span class="mt">ResizeAndStoreAsync</span>(<span class="vr">blobStream</span>, <span class="vr">name</span>);
+}</code></pre>
+  </div>
+  <div class="callout callout-orange"><div class="callout-label">Important — Blob Trigger Latency</div><p>Classic Blob Trigger polling-এ কাজ করে — বড় container-এ <strong>১০ মিনিট পর্যন্ত delay</strong> হতে পারে। Production real-time processing-এর জন্য Storage Account-এ <strong>Event Grid subscription</strong> বানিয়ে <strong>Event Grid Trigger</strong> ব্যবহার করো — millisecond-এ react করবে।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q7</div><div class="q-text">Azure Queue Storage Trigger — Background Message Processing</div></div>
+  <h3>Pattern: Request থেকে কাজ আলাদা করো</h3>
+  <p>Order place হলে HTTP endpoint সাথে সাথে email পাঠাবে না, invoice বানাবে না। সেটা করলে যেকোনো একটা fail করলে পুরো order fail। বরং HTTP endpoint queue-তে message রেখে 202 return করবে। আলাদা Function সেই message process করবে।</p>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Functions/OrderProcessorFunction.cs</span><span class="lang-badge">C# · Queue Trigger</span></div>
+    <pre><code>[<span class="at">Function</span>(<span class="st">"ProcessOrderMessage"</span>)]
+<span class="kw">public async</span> <span class="tp">Task</span> <span class="mt">Run</span>(
+    [<span class="at">QueueTrigger</span>(<span class="st">"order-events"</span>, Connection = <span class="st">"AzureWebJobsStorage"</span>)] <span class="tp">string</span> <span class="vr">message</span>)
+{
+    <span class="kw">await</span> <span class="vr">_processor</span>.<span class="mt">ProcessAsync</span>(<span class="vr">message</span>);
+    <span class="cm">// exception না হলে message auto-delete হয়</span>
+    <span class="cm">// exception হলে message queue-এ ফিরে আসে (retry)</span>
+    <span class="cm">// maxDequeueCount পার হলে → poison queue-এ যায়</span>
+}</code></pre>
+  </div>
+  <div class="callout callout-yellow"><div class="callout-label">What If — Exception in Queue Function</div><p>Unhandled exception হলে message <strong>delete হয় না</strong> — retry period পর queue-তে ফিরে আসে। Default <code>maxDequeueCount</code> = 5 retries। তারপর <code>{queue-name}-poison</code> queue-এ যায়। সবসময় poison queue monitor করার strategy রাখো।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q8</div><div class="q-text">Service Bus Trigger — Enterprise Messaging Integration</div></div>
+  <div class="callout callout-gray"><div class="callout-label">Scope Note</div><p>এখানে শুধু Function কীভাবে Service Bus trigger হিসেবে ব্যবহার করে সেটা দেখব। Service Bus internals (DLQ, sessions, duplicate detection) আলাদা chapter।</p></div>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Functions/PaymentEventFunction.cs</span><span class="lang-badge">C# · Service Bus Trigger</span></div>
+    <pre><code><span class="cm">// Queue trigger</span>
+[<span class="at">Function</span>(<span class="st">"ProcessPaymentEvent"</span>)]
+<span class="kw">public async</span> <span class="tp">Task</span> <span class="mt">Run</span>(
+    [<span class="at">ServiceBusTrigger</span>(<span class="st">"payment-events"</span>, Connection = <span class="st">"ServiceBusConnection"</span>)]
+    <span class="tp">ServiceBusReceivedMessage</span> <span class="vr">message</span>)
+{
+    <span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">"MessageId={Id}"</span>, <span class="vr">message</span>.MessageId);
+    <span class="kw">var</span> <span class="vr">body</span> = <span class="vr">message</span>.Body.<span class="mt">ToString</span>();
+    <span class="cm">// complete হলে auto-complete, exception হলে abandon (retry)</span>
+}
+
+<span class="cm">// Topic + Subscription trigger</span>
+[<span class="at">Function</span>(<span class="st">"ProcessNotification"</span>)]
+<span class="kw">public async</span> <span class="tp">Task</span> <span class="mt">Run2</span>(
+    [<span class="at">ServiceBusTrigger</span>(topicName: <span class="st">"order-notifications"</span>, subscriptionName: <span class="st">"email-service"</span>,
+        Connection = <span class="st">"ServiceBusConnection"</span>)] <span class="tp">ServiceBusReceivedMessage</span> <span class="vr">msg</span>)
+{ <span class="cm">/* process */</span> }</code></pre>
+  </div>
+  <div class="callout callout-purple"><div class="callout-label">Architecture — Managed Identity for Service Bus</div><p>Connection string-এর বদলে App Settings-এ: <code>ServiceBusConnection__fullyQualifiedNamespace = yourbus.servicebus.windows.net</code> আর <code>ServiceBusConnection__credential = managedidentity</code> রাখো। Function App-এর Managed Identity-কে <strong>Azure Service Bus Data Receiver</strong> RBAC role দাও।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q9</div><div class="q-text">Event Grid Trigger — Event-Driven Function</div></div>
+  <p>Event Grid হলো Azure-এর event routing service। কোনো কিছু হলে (blob upload, resource delete, custom event) Event Grid সেই event তোমার Function-এ near real-time-এ push করে — polling নয়, Function ঘুমিয়ে থাকে event আসা পর্যন্ত।</p>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Functions/BlobCreatedHandler.cs</span><span class="lang-badge">C# · Event Grid Trigger</span></div>
+    <pre><code>[<span class="at">Function</span>(<span class="st">"OnBlobCreated"</span>)]
+<span class="kw">public</span> <span class="tp">Task</span> <span class="mt">Run</span>([<span class="at">EventGridTrigger</span>] <span class="tp">CloudEvent</span> <span class="vr">cloudEvent</span>)
+{
+    <span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">"Type={T}, Subject={S}"</span>, <span class="vr">cloudEvent</span>.Type, <span class="vr">cloudEvent</span>.Subject);
+    <span class="cm">// cloudEvent.Data → event payload (e.g. BlobCreated: URL, contentType)</span>
+    <span class="kw">return</span> <span class="tp">Task</span>.CompletedTask;
+}</code></pre>
+  </div>
+  <div class="callout callout-orange"><div class="callout-label">Interview Tip — Event Grid vs Blob Trigger</div><p>Real-time blob processing-এর জন্য <strong>Event Grid Trigger</strong> (Storage Account-এর blob event-এ subscribe করে) ব্যবহার করো। Classic Blob Trigger polling করে — ১০ মিনিট পর্যন্ত delay। Event Grid Trigger millisecond-এ react করে।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q10</div><div class="q-text">Event Hub Trigger — High-Volume Event Stream Processing</div></div>
+  <p>Event Hub হলো <strong>massive high-throughput event stream</strong>-এর জন্য — IoT device telemetry, application logs, clickstream। Functions Event Hub Trigger দিয়ে partition অনুযায়ী batch-এ process করে।</p>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Functions/TelemetryFunction.cs</span><span class="lang-badge">C# · Event Hub Trigger</span></div>
+    <pre><code>[<span class="at">Function</span>(<span class="st">"ProcessTelemetry"</span>)]
+<span class="kw">public async</span> <span class="tp">Task</span> <span class="mt">Run</span>(
+    [<span class="at">EventHubTrigger</span>(<span class="st">"device-telemetry"</span>, Connection = <span class="st">"EventHubConnection"</span>,
+        ConsumerGroup = <span class="st">"telemetry-processor"</span>)] <span class="tp">EventData</span>[] <span class="vr">events</span>)
+{
+    <span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">"Batch size: {N}"</span>, <span class="vr">events</span>.Length);
+    <span class="kw">foreach</span> (<span class="kw">var</span> <span class="vr">e</span> <span class="kw">in</span> <span class="vr">events</span>) { <span class="cm">/* process each event */</span> }
+}</code></pre>
+  </div>
+  <div class="callout callout-gray"><div class="callout-label">Scaling Note</div><p>Event Hub Function scale হয় <strong>partition</strong> সংখ্যা অনুযায়ী। Maximum parallelism = Event Hub-এর partition count। ৩২-partition Event Hub → সর্বোচ্চ ৩২টা concurrent Function instance।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q11</div><div class="q-text">Trigger Selection — কোন requirement-এ কোন Trigger?</div></div>
+  <table class="compare-table">
+    <thead><tr><th>Trigger</th><th>কখন ব্যবহার করবে</th><th>Key বৈশিষ্ট্য</th><th>Watch-Out</th></tr></thead>
+    <tbody>
+      <tr><td><strong>HTTP</strong></td><td>Client synchronous response চায় (REST API, webhook)</td><td>Sync request/response</td><td>Long-running কাজে ব্যবহার করো না — Queue-এ offload করো</td></tr>
+      <tr><td><strong>Timer</strong></td><td>Scheduled job: রাতের batch, cleanup</td><td>NCRONTAB schedule</td><td>Scale-out-এ distributed lock আপনাআপনি handle হয়</td></tr>
+      <tr><td><strong>Blob</strong></td><td>Storage file processing (low frequency)</td><td>Polling, delay হতে পারে</td><td>Real-time চাইলে Event Grid Trigger ব্যবহার করো</td></tr>
+      <tr><td><strong>Queue Storage</strong></td><td>Simple background queue, decoupling</td><td>At-least-once, poison queue</td><td>Max 64KB message, no ordering guarantee</td></tr>
+      <tr><td><strong>Service Bus</strong></td><td>Enterprise messaging: sessions, DLQ, transactions</td><td>Rich, reliable</td><td>Queue Storage-এর চেয়ে দামী</td></tr>
+      <tr><td><strong>Event Grid</strong></td><td>Azure resource events-এ near real-time react</td><td>Push-based, milliseconds</td><td>At-least-once — idempotency design করো</td></tr>
+      <tr><td><strong>Event Hub</strong></td><td>High-volume telemetry, IoT, millions/sec</td><td>Partition-based, batch</td><td>Individual event-এর low-latency processing-এর জন্য নয়</td></tr>
+    </tbody>
+  </table>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch02</h4>
+    <ul>
+      <li><strong>HTTP Trigger</strong>: Isolated Worker-এ <code>HttpRequestData</code>/<code>HttpResponseData</code> — ASP.NET Core types নয়।</li>
+      <li><strong>Function Key ≠ Identity Auth</strong>। Key static secret; Entra ID JWT short-lived, claim-bearing।</li>
+      <li><strong>Timer NCRONTAB</strong>: ৬ part — <code>{sec} {min} {hr} {day} {month} {dow}</code>। <code>%AppSetting%</code> দিয়ে environment-specific schedule।</li>
+      <li><strong>Blob Trigger</strong>: polling, ১০ মিনিট delay। Real-time চাইলে Event Grid Trigger।</li>
+      <li><strong>Queue exception</strong>: message retry queue-এ ফিরে যায় → max dequeue count পার → poison queue।</li>
+      <li><strong>Service Bus Topic Trigger</strong>: <code>topicName</code> + <code>subscriptionName</code> দুটোই লাগে।</li>
+      <li><strong>Event Hub</strong>: scale = partition count। Batch processing model।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CH02 -->
+
+<!-- CH03 -->
+<section class="chapter" id="ch03">
+  <div class="chapter-header">
+    <div class="ch-num">03</div>
+    <div>
+      <div class="ch-title">.NET Isolated Worker Model</div>
+      <div class="ch-sub">Architecture, Program.cs, DI, Middleware, Lifecycle</div>
+    </div>
+  </div>
+
+  <div class="question-block"><div class="q-label">Q12</div><div class="q-text">.NET Isolated Worker — Complete Architecture &amp; Project Structure</div></div>
+  <h3>Isolated Worker Model কেন এলো?</h3>
+  <p>আগে Azure Functions তোমার code host process-এর ভেতরেই চালাত (In-Process model)। সমস্যা হলো তোমার code আর Azure Functions runtime একই process শেয়ার করত — একই .NET version, একই dependencies। Azure host update করলে তোমার app ভেঙে যেতে পারত।</p>
+  <div class="callout callout-blue"><div class="callout-label">Core Concept — Isolated Worker</div><p><strong>Isolated Worker Model</strong>-এ তোমার Function code একটা <strong>সম্পূর্ণ আলাদা .NET worker process</strong>-এ চলে। Azure Functions host আলাদা process, তোমার app আলাদা process — gRPC দিয়ে communicate করে। এতে তুমি পাচ্ছ:<br/>• যেকোনো .NET version target করার স্বাধীনতা<br/>• নিজস্ব <code>Program.cs</code> entry point<br/>• Full DI container, middleware pipeline, configuration system</p></div>
+  <div class="diagram"><div class="diagram-title">In-Process vs Isolated Worker</div><pre>
+IN-PROCESS (পুরনো)                    ISOLATED WORKER (আধুনিক)
+─────────────────────────────         ──────────────────────────────────────
+┌────────────────────────────┐        ┌────────────────┐  gRPC  ┌──────────────────────┐
+│  Functions Host Process    │        │ Functions Host │◄──────►│  Your Worker Process │
+│  ┌──────────────────────┐  │        │ (Azure runtime)│        │  Program.cs          │
+│  │  Your Function Code  │  │        └────────────────┘        │  DI Container        │
+│  └──────────────────────┘  │                                  │  Middleware          │
+└────────────────────────────┘                                  │  Your Functions      │
+                                                                └──────────────────────┘
+সীমাবদ্ধতা: host-এর .NET-এ আটকে       সুবিধা: যেকোনো .NET, full control</pre></div>
+
+  <h3>Project Structure</h3>
+  <div class="diagram"><div class="diagram-title">Recommended Folder Structure</div><pre>
+MyFunctionApp/
+├── Program.cs                ← entry point, DI registrations, middleware
+├── host.json                 ← Functions host config (logging, retry)
+├── local.settings.json       ← LOCAL ONLY (deploy হয় না, .gitignore-এ রাখো)
+│
+├── Functions/                ← শুধু trigger entry point — business logic নয়
+├── Services/                 ← business logic (Interface + Implementation)
+├── Repositories/             ← data access / external API clients
+├── Middleware/               ← cross-cutting concerns
+├── Models/                   ← DTOs, request/response models
+└── Configuration/            ← strongly-typed options classes</pre></div>
+
+  <h3>Program.cs — Entry Point</h3>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Program.cs</span><span class="lang-badge">C# · .NET Isolated Entry Point</span></div>
+    <pre><code><span class="kw">var</span> <span class="vr">host</span> = <span class="kw">new</span> <span class="tp">HostBuilder</span>()
+    .<span class="mt">ConfigureFunctionsWorkerDefaults</span>(<span class="vr">workerApp</span> =>
+    {
+        <span class="cm">// Middleware — সব function invocation-এ apply হয়</span>
+        <span class="vr">workerApp</span>.<span class="mt">UseMiddleware</span>&lt;<span class="tp">ExceptionHandlingMiddleware</span>&gt;();
+    })
+    .<span class="mt">ConfigureServices</span>((<span class="vr">context</span>, <span class="vr">services</span>) =>
+    {
+        <span class="cm">// Config — "App" section bind করো AppOptions-এ</span>
+        <span class="vr">services</span>.<span class="mt">Configure</span>&lt;<span class="tp">AppOptions</span>&gt;(<span class="vr">context</span>.Configuration.<span class="mt">GetSection</span>(<span class="st">"App"</span>));
+        <span class="cm">// Services</span>
+        <span class="vr">services</span>.<span class="mt">AddScoped</span>&lt;<span class="tp">IOrderService</span>, <span class="tp">OrderService</span>&gt;();
+        <span class="vr">services</span>.<span class="mt">AddScoped</span>&lt;<span class="tp">IOrderRepository</span>, <span class="tp">OrderRepository</span>&gt;();
+        <span class="vr">services</span>.<span class="mt">AddSingleton</span>&lt;<span class="tp">IReportService</span>, <span class="tp">ReportService</span>&gt;();
+        <span class="cm">// Application Insights</span>
+        <span class="vr">services</span>.<span class="mt">AddApplicationInsightsTelemetryWorkerService</span>();
+        <span class="vr">services</span>.<span class="mt">ConfigureFunctionsApplicationInsights</span>();
+    })
+    .<span class="mt">Build</span>();
+<span class="kw">await</span> <span class="vr">host</span>.<span class="mt">RunAsync</span>();</code></pre>
+  </div>
+  <p><strong>মনে রাখো:</strong> <code>ConfigureServices</code> একবারই চলে — process startup-এ। Singleton object তখনই তৈরি হয়। Scoped object প্রতিটা invocation-এ তৈরি হয়। Cold start = worker process restart = সব rebuild।</p>
+  <div class="callout callout-orange"><div class="callout-label">Important — Startup vs Invocation</div><p><code>Program.cs</code>-এর DI registration <strong>একবার process startup-এ</strong> চলে। Singleton object তখন তৈরি হয়, বারবার reuse হয়। Scoped object প্রতিটা Function invocation-এ নতুন তৈরি হয়, invocation শেষে dispose হয়।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q13</div><div class="q-text">Dependency Injection — Complete Implementation</div></div>
+  <h3>DI ছাড়া সমস্যাটা কী?</h3>
+  <p>Function-এর ভেতরে <code>var service = new OrderService()</code> লিখলে কাজ হবে। কিন্তু <code>OrderService</code>-এর দরকার হলো <code>HttpClient</code>, database connection string, <code>ILogger</code>, আর <code>IPaymentClient</code> — তখন Function-এর ভেতরেই সব wire করতে হবে। Test করা কঠিন, messy code। DI এটা solve করে।</p>
+
+  <h3>Service Lifetime — গুরুত্বপূর্ণ পার্থক্য</h3>
+  <table class="compare-table">
+    <thead><tr><th>Lifetime</th><th>কতটা instance?</th><th>কখন ব্যবহার করবে</th><th>Common ভুল</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Singleton</strong></td><td>প্রতি worker process-এ একটা — সব invocation share করে</td><td>Expensive object: HttpClient (factory দিয়ে), cache</td><td>Singleton-এ Scoped inject করা → scope leak</td></tr>
+      <tr><td><strong>Scoped</strong></td><td>প্রতিটা Function invocation-এ একটা</td><td>Business logic services, DB context</td><td>Scoped invocation-এর বাইরে survive করে মনে করা</td></tr>
+      <tr><td><strong>Transient</strong></td><td>DI থেকে চাওয়া প্রতিবারই নতুন</td><td>Lightweight, stateless, cheap object</td><td>DbContext-কে Transient করা — wasteful</td></tr>
+    </tbody>
+  </table>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Services/OrderService.cs + IOrderService.cs</span><span class="lang-badge">C#</span></div>
+    <pre><code><span class="kw">public interface</span> <span class="tp">IOrderService</span>
+{
+    <span class="tp">Task</span>&lt;<span class="tp">OrderResponse</span>?&gt; <span class="mt">GetByIdAsync</span>(<span class="tp">string</span> <span class="vr">id</span>);
+    <span class="tp">Task</span>&lt;<span class="tp">OrderResponse</span>&gt; <span class="mt">CreateAsync</span>(<span class="tp">CreateOrderRequest</span> <span class="vr">req</span>);
+}
+
+<span class="kw">public class</span> <span class="tp">OrderService</span> : <span class="tp">IOrderService</span>
+{
+    <span class="kw">private readonly</span> <span class="tp">IOrderRepository</span> <span class="vr">_repo</span>;
+    <span class="kw">private readonly</span> <span class="tp">ILogger</span>&lt;<span class="tp">OrderService</span>&gt; <span class="vr">_logger</span>;
+    <span class="kw">public</span> <span class="mt">OrderService</span>(<span class="tp">IOrderRepository</span> <span class="vr">repo</span>, <span class="tp">ILogger</span>&lt;<span class="tp">OrderService</span>&gt; <span class="vr">logger</span>)
+        => (<span class="vr">_repo</span>, <span class="vr">_logger</span>) = (<span class="vr">repo</span>, <span class="vr">logger</span>);
+
+    <span class="kw">public async</span> <span class="tp">Task</span>&lt;<span class="tp">OrderResponse</span>?&gt; <span class="mt">GetByIdAsync</span>(<span class="tp">string</span> <span class="vr">id</span>)
+    {
+        <span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">"Fetching order {Id}"</span>, <span class="vr">id</span>);
+        <span class="kw">var</span> <span class="vr">order</span> = <span class="kw">await</span> <span class="vr">_repo</span>.<span class="mt">GetByIdAsync</span>(<span class="vr">id</span>);
+        <span class="kw">return</span> <span class="vr">order</span> == <span class="kw">null</span> ? <span class="kw">null</span> : <span class="kw">new</span> <span class="tp">OrderResponse</span>(<span class="vr">order</span>);
+    }
+    <span class="kw">public async</span> <span class="tp">Task</span>&lt;<span class="tp">OrderResponse</span>&gt; <span class="mt">CreateAsync</span>(<span class="tp">CreateOrderRequest</span> <span class="vr">req</span>)
+        => <span class="kw">new</span> <span class="tp">OrderResponse</span>(<span class="kw">await</span> <span class="vr">_repo</span>.<span class="mt">CreateAsync</span>(<span class="vr">req</span>));
+}</code></pre>
+  </div>
+  <div class="callout callout-yellow"><div class="callout-label">Interview Twist — Singleton + Scale-Out</div><p>"Function App Singleton service ব্যবহার করে আর Azure ৫টা instance-এ scale করেছে — সব ৫টা instance কি exactly একটা Singleton object share করে?"</p><p><strong>না।</strong> প্রতিটা worker process-এর নিজস্ব DI container আছে। ৫টা instance = ৫টা আলাদা Singleton object, প্রতিটা তার নিজের process-এ। এ কারণে Singleton-এ in-memory state রাখা unreliable।</p></div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q14</div><div class="q-text">Middleware &amp; Global Exception Handling</div></div>
+  <h3>সমস্যা: প্রতিটা Function-এ try/catch</h3>
+  <p>Middleware ছাড়া প্রতিটা Function-এ আলাদাভাবে try/catch লিখতে হতো। Inconsistent error handling, ভুলে গেলে বিপদ। Middleware সব invocation-এ একবার cross-cutting logic apply করে।</p>
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Middleware/ExceptionHandlingMiddleware.cs</span><span class="lang-badge">C# · Isolated Worker Middleware</span></div>
+    <pre><code><span class="kw">public class</span> <span class="tp">ExceptionHandlingMiddleware</span> : <span class="tp">IFunctionsWorkerMiddleware</span>
+{
+    <span class="kw">private readonly</span> <span class="tp">ILogger</span>&lt;<span class="tp">ExceptionHandlingMiddleware</span>&gt; <span class="vr">_logger</span>;
+    <span class="kw">public</span> <span class="mt">ExceptionHandlingMiddleware</span>(<span class="tp">ILogger</span>&lt;<span class="tp">ExceptionHandlingMiddleware</span>&gt; <span class="vr">l</span>) => <span class="vr">_logger</span> = <span class="vr">l</span>;
+
+    <span class="kw">public async</span> <span class="tp">Task</span> <span class="mt">Invoke</span>(<span class="tp">FunctionContext</span> <span class="vr">context</span>, <span class="tp">FunctionExecutionDelegate</span> <span class="vr">next</span>)
+    {
+        <span class="kw">try</span>
+        {
+            <span class="cm">// CorrelationId সব log-এ attach করো</span>
+            <span class="kw">using</span> (<span class="vr">_logger</span>.<span class="mt">BeginScope</span>(<span class="kw">new</span> <span class="tp">Dictionary</span>&lt;<span class="tp">string</span>, <span class="tp">object</span>&gt;
+                { [<span class="st">"InvocationId"</span>] = <span class="vr">context</span>.InvocationId }))
+            {
+                <span class="kw">await</span> <span class="vr">next</span>(<span class="vr">context</span>); <span class="cm">// ← পরের middleware বা Function নিজেই চালাও</span>
+            }
+        }
+        <span class="kw">catch</span> (<span class="tp">Exception</span> <span class="vr">ex</span>)
+        {
+            <span class="vr">_logger</span>.<span class="mt">LogError</span>(<span class="vr">ex</span>, <span class="st">"Unhandled in {Fn}"</span>, <span class="vr">context</span>.FunctionDefinition.Name);
+            <span class="cm">// HTTP function হলে 500 response return করো</span>
+            <span class="kw">var</span> <span class="vr">httpReq</span> = <span class="kw">await</span> <span class="vr">context</span>.<span class="mt">GetHttpRequestDataAsync</span>();
+            <span class="kw">if</span> (<span class="vr">httpReq</span> != <span class="kw">null</span>)
+            {
+                <span class="kw">var</span> <span class="vr">res</span> = <span class="vr">httpReq</span>.<span class="mt">CreateResponse</span>(<span class="tp">HttpStatusCode</span>.InternalServerError);
+                <span class="kw">await</span> <span class="vr">res</span>.<span class="mt">WriteAsJsonAsync</span>(<span class="kw">new</span> { error = <span class="st">"Unexpected error."</span>, requestId = <span class="vr">context</span>.InvocationId });
+                <span class="vr">context</span>.<span class="mt">GetInvocationResult</span>().Value = <span class="vr">res</span>;
+            }
+        }
+    }
+}</code></pre>
+  </div>
+  <ul>
+    <li><code>IFunctionsWorkerMiddleware</code> — তোমার middleware এই interface implement করবে।</li>
+    <li><code>next(context)</code> call না করলে Function কখনো execute হবে না।</li>
+    <li>HTTP Function-এ <code>context.GetHttpRequestDataAsync()</code> দিয়ে request পাওয়া যায়, error response বানানো যায়।</li>
+    <li>Non-HTTP (Timer, Queue) Function-এ HTTP response নেই — শুধু log করো।</li>
+  </ul>
+  <div class="callout callout-green"><div class="callout-label">Best Practice — Middleware-এ কী রাখবে</div><ul><li>Global exception handling (log + 500 return for HTTP)</li><li>CorrelationId generation আর propagation</li><li>Request/response logging</li><li>JWT token validation (Easy Auth না থাকলে)</li><li><strong>Business logic middleware-এ রেখো না।</strong></li></ul></div>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch03</h4>
+    <ul>
+      <li><strong>Isolated Worker</strong> = তোমার code আলাদা process-এ। Functions host আলাদা process। gRPC দিয়ে communicate।</li>
+      <li><code>Program.cs</code> = DI + middleware। Process startup-এ একবার চলে।</li>
+      <li><strong>Singleton</strong>: প্রতি worker process-এ একটা (globally shared নয়!)। <strong>Scoped</strong>: প্রতি invocation। <strong>Transient</strong>: প্রতিবার নতুন।</li>
+      <li>Functions পাতলা রাখো — শুধু trigger entry point। Business logic → Services → Repositories।</li>
+      <li>Middleware সব invocation wrap করে। Exception handling, CorrelationId, JWT validation এখানে।</li>
+      <li><strong>Interview trap</strong>: "Singleton সব instance share করে" → মিথ্যা। প্রতি worker process-এর নিজস্ব।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CH03 -->
+
+<!-- CH04 -->
+<section class="chapter" id="ch04">
+  <div class="chapter-header">
+    <div class="ch-num">04</div>
+    <div>
+      <div class="ch-title">Configuration</div>
+      <div class="ch-sub">local.settings.json · App Settings · IConfiguration · Options Pattern · Multi-Environment</div>
+    </div>
+  </div>
+
+  <div class="question-block"><div class="q-label">Q15</div><div class="q-text">Complete Configuration Management — One Codebase, Four Environments</div></div>
+  <h3>সমস্যাটা কী?</h3>
+  <p>তুমি একটা Function App বানিয়েছ যেটা database-এ connect করে, external API call করে, Service Bus namespace পড়ে। Locally dev database, QA-তে QA database, Production-এ production database। Code একই — শুধু values আলাদা। এটা কীভাবে cleanly manage করবে?</p>
+  <div class="callout callout-blue"><div class="callout-label">Core Concept — Configuration Hierarchy</div><p>Azure Functions <strong>Microsoft.Extensions.Configuration</strong> ব্যবহার করে। Multiple source থেকে layer করে config পড়ে। পরের source আগেরটাকে override করে:</p><ol><li><code>host.json</code> (runtime behavior)</li><li><code>local.settings.json</code> (local dev only, deploy হয় না)</li><li>Environment Variables (Azure-এ: App Settings)</li><li>Key Vault references (App Settings-এর মাধ্যমে)</li></ol></div>
+
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">local.settings.json</span><span class="lang-badge">JSON · LOCAL ONLY</span></div>
+    <pre><code>{
+  <span class="st">"IsEncrypted"</span>: <span class="kw">false</span>,
+  <span class="st">"Values"</span>: {
+    <span class="st">"AzureWebJobsStorage"</span>: <span class="st">"UseDevelopmentStorage=true"</span>,
+    <span class="st">"FUNCTIONS_WORKER_RUNTIME"</span>: <span class="st">"dotnet-isolated"</span>,
+    <span class="st">"App__DatabaseConnectionString"</span>: <span class="st">"Server=localhost;Database=OrdersDb;..."</span>,
+    <span class="st">"App__ExternalApiBaseUrl"</span>: <span class="st">"https://dev-api.example.com"</span>,
+    <span class="st">"NightlyReportSchedule"</span>: <span class="st">"0 */5 * * * *"</span>
+  }
+}</code></pre>
+  </div>
+  <div class="callout callout-red"><div class="callout-label">Warning — local.settings.json কখনো commit করো না</div><p><code>local.settings.json</code> সবসময় <code>.gitignore</code>-এ রাখো। এটা শুধু local dev-এর জন্য, deploy হয় না। এখানে real production secret রেখো না।</p></div>
+  <p><strong><code>App__DatabaseConnectionString</code></strong> — double underscore (<code>__</code>) হলো environment variable-এ hierarchy separator। এটা <code>App.DatabaseConnectionString</code> নামের nested config-এ map হয়। Options Pattern-এর জন্য এটা জানা জরুরি।</p>
+
+  <div class="grid-2">
+    <div class="callout callout-gray"><div class="callout-label">Local</div><p>Values আসে <code>local.settings.json</code> → <code>Values</code> section থেকে। Local Functions runtime এটা load করে।</p></div>
+    <div class="callout callout-green"><div class="callout-label">Azure</div><p>Values আসে <strong>App Settings</strong> (environment variables) থেকে। Portal, ARM/Bicep, বা deployment pipeline-এ set করো। Azure নিজে encrypt করে রাখে।</p></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Configuration/AppOptions.cs + Program.cs</span><span class="lang-badge">C# · Options Pattern</span></div>
+    <pre><code><span class="cm">// Strongly-typed options class</span>
+<span class="kw">public class</span> <span class="tp">AppOptions</span>
+{
+    <span class="kw">public</span> <span class="tp">string</span> DatabaseConnectionString { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="tp">string</span>.Empty;
+    <span class="kw">public</span> <span class="tp">string</span> ExternalApiBaseUrl { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="tp">string</span>.Empty;
+}
+
+<span class="cm">// Program.cs-এ register করো</span>
+<span class="vr">services</span>.<span class="mt">Configure</span>&lt;<span class="tp">AppOptions</span>&gt;(<span class="vr">context</span>.Configuration.<span class="mt">GetSection</span>(<span class="st">"App"</span>));
+
+<span class="cm">// Service-এ inject করো</span>
+<span class="kw">public class</span> <span class="tp">OrderService</span>
+{
+    <span class="kw">private readonly</span> <span class="tp">AppOptions</span> <span class="vr">_options</span>;
+    <span class="kw">public</span> <span class="mt">OrderService</span>(<span class="tp">IOptions</span>&lt;<span class="tp">AppOptions</span>&gt; <span class="vr">opts</span>) => <span class="vr">_options</span> = <span class="vr">opts</span>.Value;
+    <span class="cm">// _options.DatabaseConnectionString → environment অনুযায়ী আলাদা value</span>
+}</code></pre>
+  </div>
+  <div class="callout callout-yellow"><div class="callout-label">What If — Missing Config in Production</div><p>Azure-এ কোনো required App Setting missing থাকলে Function startup-এ fail করবে (constructor-এ পড়লে) অথবা runtime-এ fail করবে (method-এ পড়লে)। Critical config সবসময় startup-এ validate করো এবং clear error message দিয়ে fail fast করো।</p></div>
+  <div class="callout callout-purple"><div class="callout-label">Architecture — Config vs Secret</div><ul><li><strong>App Settings</strong> = non-sensitive config (API URL, feature flag, schedule)। Plain text-এ রাখা যায়।</li><li><strong>Secrets</strong> = password, connection string with credentials, API key। <strong>Azure Key Vault</strong> থেকে আনো, plain App Settings-এ রেখো না।</li></ul></div>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch04</h4>
+    <ul>
+      <li><code>local.settings.json</code> = শুধু local। Deploy হয় না। সবসময় <code>.gitignore</code>-এ।</li>
+      <li>Azure App Settings = environment variables। Production config এখানে।</li>
+      <li><code>App__Key</code> env var → <code>App.Key</code> config-এ map হয় (double underscore = hierarchy separator)।</li>
+      <li><strong>Options Pattern</strong>: config section bind করো typed C# class-এ। Register: <code>services.Configure&lt;T&gt;</code>, inject: <code>IOptions&lt;T&gt;</code>।</li>
+      <li><strong>Interview trap</strong>: "DB password App Settings-এ রেখেছি" → Production-এ wrong। Key Vault ব্যবহার করো।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CH04 -->
+
+<!-- CH05 -->
+<section class="chapter" id="ch05">
+  <div class="chapter-header">
+    <div class="ch-num">05</div>
+    <div>
+      <div class="ch-title">Identity, Credentials &amp; Secrets</div>
+      <div class="ch-sub">Managed Identity · DefaultAzureCredential · Key Vault · Secretless Architecture</div>
+    </div>
+  </div>
+
+  <div class="question-block"><div class="q-label">Q16</div><div class="q-text">Managed Identity &amp; DefaultAzureCredential — Same Code, Local and Azure</div></div>
+  <h3>সমস্যা: Function Azure resources-এ authenticate কীভাবে করবে?</h3>
+  <p>Function-কে Blob Storage পড়তে হবে, Service Bus message পাঠাতে হবে, Key Vault থেকে secret আনতে হবে। Naive approach: connection string বা client secret App Settings-এ রাখো। সমস্যা:</p>
+  <ul>
+    <li>Portal access আছে এমন যে কেউ secret দেখতে পাবে</li>
+    <li>Secret expire হয়, rotation-এর জন্য মানুষ লাগে</li>
+    <li>Secret leak হলে full access</li>
+  </ul>
+  <div class="callout callout-blue"><div class="callout-label">Core Concept — Managed Identity</div><p><strong>Managed Identity</strong> হলো Azure-এর দেওয়া একটা Azure AD identity যেটা তোমার Function App-এর হয়ে কাজ করে। কোনো credential কোথাও store করতে হয় না। Azure নিজেই identity lifecycle manage করে — কোনো password নেই, client secret নেই, certificate নেই।</p></div>
+  <div class="diagram"><div class="diagram-title">Managed Identity Authentication Flow</div><pre>
+Function App (System-assigned Managed Identity enabled)
+    │
+    │  "Blob Storage-এর জন্য token চাই"
+    ▼
+Azure Instance Metadata Service (IMDS) ← প্রতিটা Azure VM/worker-এ built-in
+    │
+    │  Short-lived access token return করে (~১ ঘণ্টা, auto-renew)
+    ▼
+Function Code token পায়
+    │
+    │  Blob Storage API call-এ token use করে
+    ▼
+Azure Blob Storage
+    │
+    │  Token validate করে Azure AD দিয়ে
+    │  → Valid identity? → Required RBAC role আছে?
+    ▼
+Access granted বা denied</pre></div>
+
+  <div class="callout callout-orange"><div class="callout-label">Important — RBAC Assignment লাগে</div><p>Managed Identity enable করলেই কিছু পাওয়া যায় না। প্রতিটা target resource-এ সঠিক RBAC role assign করতে হবে। যেমন: blob পড়তে হলে Storage Account-এ <strong>Storage Blob Data Reader</strong> role দাও। RBAC ছাড়া authentication succeed করলেও authorization 403 দিবে।</p></div>
+
+  <h3>DefaultAzureCredential — একই code, সব environment-এ</h3>
+  <div class="diagram"><div class="diagram-title">DefaultAzureCredential — Credential Chain</div><pre>
+DefaultAzureCredential এই ক্রমে try করে:
+1. EnvironmentCredential    ← env vars: AZURE_CLIENT_ID etc.
+2. WorkloadIdentityCredential
+3. ManagedIdentityCredential  ← Azure-hosted: IMDS ব্যবহার করে  ← Azure-এ এটা fire করে
+4. SharedTokenCacheCredential
+5. VisualStudioCredential   ← VS signed-in account             ← Locally এটা fire করে
+6. VisualStudioCodeCredential
+7. AzureCliCredential       ← az login account                 ← Locally এটা fire করে
+8. AzurePowerShellCredential
+প্রথম যেটা succeed করে সেটাই use হয়।</pre></div>
+
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Program.cs — BlobServiceClient with DefaultAzureCredential</span><span class="lang-badge">C#</span></div>
+    <pre><code><span class="cm">// কোনো connection string নেই!</span>
+<span class="cm">// Locally: VS/CLI credential, Azure-এ: Managed Identity — same code</span>
+<span class="vr">services</span>.<span class="mt">AddSingleton</span>(<span class="vr">sp</span> =>
+{
+    <span class="kw">var</span> <span class="vr">uri</span> = <span class="vr">context</span>.Configuration[<span class="st">"App__BlobStorageUri"</span>]!;
+    <span class="kw">return</span> <span class="kw">new</span> <span class="tp">BlobServiceClient</span>(<span class="kw">new</span> <span class="tp">Uri</span>(<span class="vr">uri</span>), <span class="kw">new</span> <span class="tp">DefaultAzureCredential</span>());
+});</code></pre>
+  </div>
+
+  <hr class="section-rule"/>
+
+  <div class="question-block"><div class="q-label">Q17</div><div class="q-text">Key Vault &amp; Secret Management</div></div>
+  <h3>App Settings-এ secret রাখা কেন ঠিক না?</h3>
+  <p>Azure App Settings plain text environment variable হিসেবে store হয়। Contributor access আছে এমন যে কেউ দেখতে পারে। Auditing নেই, versioning নেই, rotation-এ code redeploy লাগে। Key Vault এই সব সমাধান করে।</p>
+  <div class="callout callout-blue"><div class="callout-label">Core Concept — Key Vault Reference</div><p>Secret value-এর বদলে App Setting-এ <strong>Key Vault reference</strong> রাখো। Format:<br/><code>@Microsoft.KeyVault(SecretUri=https://my-vault.vault.azure.net/secrets/DbPassword/)</code><br/>Azure runtime এটা Managed Identity দিয়ে resolve করে। তোমার code normal env var-এর মতোই পড়ে — vault URL কখনো দেখে না।</p></div>
+  <div class="diagram"><div class="diagram-title">Key Vault Reference Resolution</div><pre>
+App Setting value: @Microsoft.KeyVault(SecretUri=https://my-vault.../secrets/DbPassword/)
+    │
+    ▼
+Azure Functions Runtime (startup বা request-এ)
+    │  Function App-এর Managed Identity use করে
+    ▼
+Azure Key Vault
+    │  Check: "Key Vault Secrets User" RBAC role আছে?
+    │  হ্যাঁ → secret value return করে
+    ▼
+Secret value → environment variable-এ inject হয়
+    │
+    ▼
+তোমার code: configuration["App__DbPassword"] → actual DB password</pre></div>
+  <div class="callout callout-green"><div class="callout-label">Best Practice</div><ul><li><strong>Key Vault Reference in App Settings</strong> — config value হিসেবে যা যায় (DB password, API key)। Zero code change।</li><li><strong>Key Vault SDK programmatically</strong> — runtime-এ dynamically secret fetch, rotation, বা logic-based access দরকার হলে।</li><li>বেশিরভাগ ক্ষেত্রে Key Vault Reference-ই সহজ।</li></ul></div>
+  <div class="callout callout-yellow"><div class="callout-label">What If — Key Vault Temporarily Unavailable</div><p>Startup-এ Key Vault unreachable হলে Function App start হবে না (App Setting resolve করতে পারবে না)। Resiliency-র জন্য: Premium plan, VNet-এ Key Vault private endpoint, availability monitoring।</p></div>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch05</h4>
+    <ul>
+      <li><strong>Managed Identity</strong> = Azure-managed identity। কোনো password store করতে হয় না।</li>
+      <li><strong>System-assigned</strong>: app-এর সাথে তৈরি ও delete। <strong>User-assigned</strong>: independent, multiple app share করতে পারে।</li>
+      <li><strong>DefaultAzureCredential</strong>: locally VS/CLI credential, Azure-এ Managed Identity — same code।</li>
+      <li>Managed Identity এর জন্য প্রতিটা resource-এ <strong>RBAC role assign করতে হবে</strong>।</li>
+      <li><strong>Key Vault Reference</strong>: App Setting-এ <code>@Microsoft.KeyVault(...)</code> রাখো। Azure resolve করে। Code-এ কোনো পরিবর্তন নেই।</li>
+      <li><strong>Interview trap</strong>: "Locally Managed Identity কাজ করে" → না। IMDS শুধু Azure-এ। DefaultAzureCredential locally VS/CLI-তে fallback করে।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CH05 -->
+
+<!-- CH06 -->
+<section class="chapter" id="ch06">
+  <div class="chapter-header">
+    <div class="ch-num">06</div>
+    <div>
+      <div class="ch-title">CORS &amp; API Security</div>
+      <div class="ch-sub">Same-Origin Policy · Preflight · CORS Configuration · Postman-এ কাজ করে Browser-এ করে না কেন?</div>
+    </div>
+  </div>
+
+  <div class="question-block"><div class="q-label">Q18</div><div class="q-text">CORS — Why Your API Works in Postman But Fails in the Browser</div></div>
+  <h3>সমস্যাটা কোথায়?</h3>
+  <p>HTTP Function deploy করলে, Postman-এ test করলে ঠিকঠাক কাজ করে। তারপর React frontend থেকে call করলে browser CORS error দেয়। কেন?</p>
+  <div class="callout callout-blue"><div class="callout-label">Core Concept — Same-Origin Policy</div><p>Browser <strong>Same-Origin Policy (SOP)</strong> enforce করে: একটা webpage শুধু <strong>same origin</strong> (scheme + domain + port)-এ API call করতে পারে। <code>https://myapp.com</code> থেকে <code>https://myfunctions.azurewebsites.net</code>-এ call = cross-origin। Browser block করবে যদি না API server explicitly বলে "আমি <code>https://myapp.com</code> থেকে request allow করি।"<br/><strong>Postman browser নয়</strong> — SOP enforce করে না। এজন্যই Postman-এ কাজ করে, browser-এ করে না।</p></div>
+
+  <h3>Preflight Request — সেই লুকানো OPTIONS call</h3>
+  <p>Non-simple request-এর জন্য (PUT, DELETE, বা JSON Content-Type-এর POST) browser আগে একটা <strong>HTTP OPTIONS request</strong> পাঠায় — "এই real request কি করতে পারব?" Server সঠিক CORS headers দিলে তবেই real request পাঠায়।</p>
+  <div class="diagram"><div class="diagram-title">CORS Preflight Flow</div><pre>
+Browser (https://myapp.com)               Function App
+    │                                          │
+    │  OPTIONS /api/orders                     │
+    │  Origin: https://myapp.com               │
+    │  Access-Control-Request-Method: POST     │
+    ├─────────────────────────────────────────►│
+    │                                          │
+    │  200 OK                                  │
+    │  Access-Control-Allow-Origin: https://myapp.com
+    │  Access-Control-Allow-Methods: POST, GET │
+    │◄─────────────────────────────────────────┤
+    │                                          │
+    │  (preflight pass হয়েছে)                  │
+    │  POST /api/orders  ← real request        │
+    ├─────────────────────────────────────────►│</pre></div>
+
+  <div class="code-block">
+    <div class="code-block-header"><span class="file-name">Azure CLI — CORS origins set করো</span><span class="lang-badge">Azure CLI</span></div>
+    <pre><code>az functionapp cors add \
+  --name my-function-app \
+  --resource-group my-rg \
+  --allowed-origins https://myapp.com https://staging.myapp.com</code></pre>
+  </div>
+  <div class="callout callout-red"><div class="callout-label">Common Mistake — Production-এ * ব্যবহার</div><p>Production-এ <code>*</code> (wildcard) allowed origin হিসেবে কখনো দিও না। মানে হলো <strong>যেকোনো website</strong> তোমার API call করতে পারবে — malicious site-ও। সবসময় exact origin specify করো।</p></div>
+  <div class="callout callout-orange"><div class="callout-label">Interview Tip</div><p>CORS <strong>browser</strong> enforce করে, server নয়। Server শুধু তার policy header দিয়ে জানায়। Server-to-server call (service calling another service) কখনো CORS-এর আওতায় পড়ে না।</p></div>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch06</h4>
+    <ul>
+      <li><strong>CORS</strong> = browser security। শুধু browser enforce করে। Postman, curl, server-to-server: CORS নেই।</li>
+      <li><strong>Same-Origin Policy</strong>: browser cross-origin request block করে যদি না API server allow করে।</li>
+      <li><strong>Preflight</strong>: non-simple request-এর আগে browser OPTIONS পাঠায়। Server সঠিক headers দিলে real request যায়।</li>
+      <li>Production-এ CORS configure করো Azure Portal (API → CORS) বা Azure CLI-তে।</li>
+      <li><strong>কখনো <code>*</code> ব্যবহার করো না</strong> production-এ। Exact origins দাও।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CH06 -->
+
+<!-- ============================================================
+     CHAPTER 07 – HOSTING, SCALING & RUNTIME
+     ============================================================ -->
+<section class="chapter" id="ch07">
+  <div class="chapter-header">
+    <div class="ch-num">07</div>
+    <div>
+      <div class="ch-title">Hosting, Scaling &amp; Runtime</div>
+      <div class="ch-sub">Consumption vs Premium vs Dedicated · Scale-Out · Cold Start · Concurrency · Lifecycle</div>
+    </div>
+  </div>
+
+  <!-- Q19 -->
+  <div class="question-block">
+    <div class="q-label">Q19</div>
+    <div class="q-text">Azure Functions Hosting Options — Which Plan for Which Workload?</div>
+  </div>
+
+  <table class="compare-table">
+    <thead>
+      <tr><th>Plan</th><th>Scaling</th><th>Cold Start</th><th>Cost</th><th>Networking</th><th>Best For</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Consumption</strong></td>
+        <td>Auto, scales to zero</td>
+        <td>হ্যাঁ (কয়েক সেকেন্ড লাগতে পারে)</td>
+        <td>Execution পিছু pay</td>
+        <td>Default-এ VNet Integration নেই</td>
+        <td>Event-driven, কম ব্যবহার, কম খরচ</td>
+      </tr>
+      <tr>
+        <td><strong>Flex Consumption</strong></td>
+        <td>Auto, দ্রুত scaling, always-ready instances</td>
+        <td>কম (always-ready থাকলে)</td>
+        <td>Execution + always-ready per charge</td>
+        <td>Full VNet support</td>
+        <td>Consumption-এর সুবিধা + ভালো cold start + networking</td>
+      </tr>
+      <tr>
+        <td><strong>Premium (EP)</strong></td>
+        <td>Auto, pre-warmed instances</td>
+        <td>না (pre-warmed)</td>
+        <td>vCPU/memory ঘণ্টা হিসেবে</td>
+        <td>Full VNet Integration</td>
+        <td>Cold start নেই + private networking + দীর্ঘ execution</td>
+      </tr>
+      <tr>
+        <td><strong>Dedicated (App Service)</strong></td>
+        <td>Manual / App Service auto-scale rules</td>
+        <td>না (সবসময় চলে)</td>
+        <td>Fixed (App Service plan)</td>
+        <td>Full VNet support</td>
+        <td>Predictable load, আগে থেকেই App Service plan আছে</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-orange">
+    <div class="callout-label">Interview Tip — কোন Workload-এ কোন Plan</div>
+    <ul>
+      <li>Cold start critical আর কম খরচ চাই → <strong>Premium (pre-warmed)</strong></li>
+      <li>Private networking দরকার → <strong>Premium অথবা Dedicated</strong></li>
+      <li>সম্পূর্ণ event-driven, intermittent, cost-sensitive → <strong>Consumption</strong></li>
+      <li>আগে থেকে App Service plan আছে → <strong>Dedicated</strong></li>
+      <li>Long-running function (১০ মিনিটের বেশি) → <strong>Premium বা Dedicated</strong> (Consumption limit: ১০ মিনিট)</li>
+    </ul>
+  </div>
+
+  <hr class="section-rule" />
+
+  <!-- Q20 -->
+  <div class="question-block">
+    <div class="q-label">Q20</div>
+    <div class="q-text">Scaling, Concurrency &amp; Cold Start</div>
+  </div>
+
+  <h3>Scale-Out — আসলে কী হয়</h3>
+  <p>Azure Functions শুধু "দ্রুত হয়" না — এটা <strong>আরো worker process instance যোগ করে</strong>। প্রতিটি instance স্বাধীনভাবে চলে। Scale controller trigger metrics (HTTP request queue depth, message queue depth ইত্যাদি) monitor করে এবং কখন instance add বা remove করবে তা ঠিক করে।</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Scale-Out Under Load</div>
+    <pre>
+Normal load (1 instance):
+  ┌───────────────────┐
+  │   Instance 1      │  ← সব request handle করে
+  └───────────────────┘
+
+Traffic spike → scale controller instances add করে:
+  ┌───────────────────┐
+  │   Instance 1      │
+  └───────────────────┘
+  ┌───────────────────┐
+  │   Instance 2      │  ← নতুন instance (cold start!)
+  └───────────────────┘
+  ┌───────────────────┐
+  │   Instance 3      │  ← নতুন instance
+  └───────────────────┘
+
+Traffic কমলে → scale in (instance সরানো হয়)
+    </pre>
+  </div>
+
+  <h3>Scaling বনাম Concurrency — একটি গুরুত্বপূর্ণ পার্থক্য</h3>
+  <div class="grid-2">
+    <div class="callout callout-blue">
+      <div class="callout-label">Scale-Out</div>
+      <p>Worker process-এর <strong>আরো instance যোগ করা</strong>। প্রতিটি instance আলাদা compute-এ চলে। Load-এর উপর নির্ভর করে automatically হয়। মোট throughput বাড়ায়।</p>
+    </div>
+    <div class="callout callout-purple">
+      <div class="callout-label">Concurrency</div>
+      <p><strong>একটি instance</strong> একসাথে কতগুলো request/message process করতে পারে। HTTP-এর জন্য: Azure একই instance-এ multiple request route করতে পারে। Queue/Service Bus-এর জন্য: <code>host.json</code> settings দিয়ে control করা হয়।</p>
+    </div>
+  </div>
+
+  <div class="callout callout-yellow">
+    <div class="callout-label">Interview Twist — একটু ভাবো</div>
+    <p>"যদি তোমার Function App ১০টি instance-এ scale করে এবং প্রতিটি ৫টি concurrent request handle করে, কোনো risk আছে কি?"</p>
+    <p>হ্যাঁ। প্রতিটি instance-এর নিজস্ব memory ও CPU আছে। কিন্তু সবাই একই downstream dependencies share করে: তোমার database, external API, Service Bus namespace। ১০×৫ = ৫০ concurrent operation একটি database-কে overwhelm করতে পারে যেটা মাত্র ২০টি connection নেয়। <strong>Function App scale করা মানে তোমার dependencies-ও scale হয়ে যায় না।</strong></p>
+  </div>
+
+  <h3>Cold Start — কী এবং কীভাবে কমাবে</h3>
+  <div class="callout callout-blue">
+    <div class="callout-label">Core Concept — Cold Start</div>
+    <p><strong>Cold start</strong> তখন হয় যখন প্রথমবার (বা idle থাকার পর) একটি নতুন worker process instance তৈরি হয়। Worker-কে করতে হয়: .NET runtime start করা, assembly load করা, <code>Program.cs</code> execute করা (DI registrations), তারপর request handle করা। Consumption plan-এ এটা ১-৫+ সেকেন্ড লাগতে পারে।</p>
+  </div>
+
+  <p>Cold start বাড়ানোর কারণগুলো:</p>
+  <ul>
+    <li>অনেক বেশি assembly / NuGet package</li>
+    <li><code>Program.cs</code>-এ expensive কাজ (অনেক Singleton client তৈরি)</li>
+    <li>Startup-এ Key Vault reference resolution</li>
+    <li>Isolated Worker model (in-process-এর তুলনায় সামান্য বেশি — process startup-এর কারণে)</li>
+  </ul>
+
+  <p>Cold start কমানোর উপায়:</p>
+  <ul>
+    <li><strong>Premium plan</strong>: pre-warmed instances — সবসময় একটি warm instance ready থাকে</li>
+    <li><strong>Program.cs-এর কাজ কমাও</strong>: যেখানে সম্ভব lazy initialization ব্যবহার করো</li>
+    <li><strong>Package কম রাখো</strong>: কম assembly = দ্রুত startup</li>
+    <li><strong>Flex Consumption always-ready instances</strong>: minimum instance count configure করো</li>
+  </ul>
+
+  <hr class="section-rule" />
+
+  <!-- Q21 -->
+  <div class="question-block">
+    <div class="q-label">Q21</div>
+    <div class="q-text">Function App Lifecycle — Startup, Idle, Restart, Scale-Out, Redeploy</div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Function App Instance Lifecycle</div>
+    <pre>
+Deploy → Azure-এ Function App resource তৈরি হয়
+    │
+    ▼
+প্রথম request/trigger fires → worker process শুরু হয় (cold start)
+    │
+    │  Program.cs execute হয়:
+    │  ├── DI container built (Singleton objects তৈরি)
+    │  ├── Middleware pipeline registered
+    │  └── Host-এর সাথে gRPC-তে connected
+    ▼
+Worker warm — পরের invocations দ্রুত হয়
+    │
+    ▼ (idle period)
+কোনো invocation নেই → Consumption plan zero-এ scale করতে পারে
+    │
+    ▼ (idle-এর পর নতুন request)
+আবার Cold start (নতুন worker process)
+    │
+    ▼ (load-এর সময়)
+Scale controller Instance 2, Instance 3 যোগ করে...
+    │  প্রতিটি নতুন instance নিজের Program.cs run করে
+    │  প্রতিটির নিজস্ব DI container, নিজস্ব Singleton objects
+    ▼
+Redeploy → সব instance restart হয় (brief downtime বা rolling update with slots)
+    </pre>
+  </div>
+
+  <div class="callout callout-red">
+    <div class="callout-label">Common Mistake — In-Memory State Store করা</div>
+    <p>Developers মাঝেমাঝে static dictionary বা Singleton-এর in-memory list-এ data রাখে। Locally ঠিকঠাক মনে হয়। কিন্তু production-এ:</p>
+    <ul>
+      <li>৩টি instance-এ scale → প্রতিটির নিজস্ব memory → data instances-এর মধ্যে ভাগ হয়ে/অসামঞ্জস্যপূর্ণ হয়ে যায়</li>
+      <li>App restart → সব in-memory data হারিয়ে যায়</li>
+      <li>Idle → Consumption zero-তে scale করে → সব in-memory data হারিয়ে যায়</li>
+    </ul>
+    <p><strong>Function App-এ কখনো critical application state memory-তে রেখো না।</strong> Azure Cache for Redis, Cosmos DB, Table Storage বা অন্য কোনো durable external store ব্যবহার করো।</p>
+  </div>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch07</h4>
+    <ul>
+      <li><strong>Consumption</strong>: auto-scale, pay-per-use, cold start, ১০ মিনিট limit। <strong>Premium</strong>: pre-warmed, cold start নেই, VNet, বেশি খরচ। <strong>Dedicated</strong>: সবসময় চলে, fixed cost, full control।</li>
+      <li><strong>Scale-out</strong> = বেশি instance। <strong>Concurrency</strong> = এক instance-এর মধ্যে parallel কাজ।</li>
+      <li>Scaled-out প্রতিটি instance-এর <strong>নিজস্ব</strong> DI container, নিজস্ব Singleton objects, নিজস্ব memory।</li>
+      <li><strong>Cold start</strong>: worker process তৈরি + DI setup + assembly loading। Premium এটা দূর করে।</li>
+      <li>Execution timeout: Consumption = সর্বোচ্চ ১০ মিনিট। Premium/Dedicated = configurable (unlimited পর্যন্ত)।</li>
+      <li><strong>Memory-তে state রেখো না</strong> — restart/scale-out-এ হারিয়ে যায়। External durable storage ব্যবহার করো।</li>
+      <li><strong>Interview trap</strong>: "Function App scale করলে database-ও scale হয়" → মিথ্যা। Downstream dependency limit নিজেই সামলাতে হবে।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 07 -->
+
+<!-- ============================================================
+     CHAPTER 08 – NETWORKING
+     ============================================================ -->
+<section class="chapter" id="ch08">
+  <div class="chapter-header">
+    <div class="ch-num">08</div>
+    <div>
+      <div class="ch-title">Networking</div>
+      <div class="ch-sub">Inbound · Outbound · Access Restrictions · VNet Integration · Private Endpoint</div>
+    </div>
+  </div>
+
+  <!-- Q22 -->
+  <div class="question-block">
+    <div class="q-label">Q22</div>
+    <div class="q-text">Function App Networking — Inbound and Outbound</div>
+  </div>
+
+  <h3>Network Traffic-এর দুটো দিক</h3>
+  <p>Function App networking সবসময় দুটো দিক দিয়ে ভাবো: তোমার Function-এ কী <em>আসছে</em> (inbound), আর তোমার Function কী <em>পাঠাচ্ছে</em> (outbound)।</p>
+
+  <div class="grid-2">
+    <div class="callout callout-blue">
+      <div class="callout-label">Inbound Traffic</div>
+      <p>কে তোমার Function <strong>call করতে পারবে</strong>? Default-এ: URL (এবং সঠিক Function Key) থাকলে যে কেউ। এটা restrict করতে পারো:</p>
+      <ul>
+        <li><strong>Access Restrictions</strong> — IP allowlist/denylist rules</li>
+        <li><strong>Private Endpoint</strong> — public internet access একদম নেই; শুধু VNet দিয়ে accessible</li>
+        <li><strong>Function Key / Entra ID auth</strong> — identity-based restriction</li>
+      </ul>
+    </div>
+    <div class="callout callout-purple">
+      <div class="callout-label">Outbound Traffic</div>
+      <p>তোমার Function কীসে <strong>connect করতে পারবে</strong>? Default-এ: শুধু public internet। Private resources-এর জন্য (private database, private Service Bus, private API):</p>
+      <ul>
+        <li><strong>VNet Integration</strong> — outbound traffic একটি VNet দিয়ে route করে, private resources access করা যায়</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Full Networking Architecture</div>
+    <pre>
+Internet / Clients
+        │
+        │ Inbound
+        ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Function App Public Endpoint                               │
+│                                                             │
+│  Access Restrictions (IP rules)                            │
+│      অথবা                                                   │
+│  Private Endpoint (public access নেই)                       │
+└─────────────────────────────────────────────────────────────┘
+        │
+        │ Function execute হয়
+        │
+        │ Outbound
+        ▼
+┌─────────────────────────────────────────────────────────────┐
+│  VNet Integration                                           │
+│  Function App-এর outbound traffic একটি VNet দিয়ে যায়       │
+└─────────────────────────────────────────────────────────────┘
+        │
+        ▼
+Private Resources (Private Endpoint enabled):
+├── Azure SQL (private endpoint)
+├── Azure Service Bus (private endpoint)
+├── Azure Key Vault (private endpoint)
+└── Azure Blob Storage (private endpoint)
+    </pre>
+  </div>
+
+  <h3>মূল ধারণাগুলো</h3>
+  <ul>
+    <li><strong>Access Restrictions</strong>: Inbound IP rules। নির্দিষ্ট IP/subnet কে Function-এর public endpoint-এ reach করতে দেওয়া বা না দেওয়া। Configure করা সহজ, API call lock down করার জন্য ভালো।</li>
+    <li><strong>VNet Integration</strong>: Outbound। Function-এর outbound traffic একটি VNet-এর নির্ধারিত subnet দিয়ে যায়। Private resources call করা যায় (DB with private endpoint ইত্যাদি)।</li>
+    <li><strong>Private Endpoint</strong>: Inbound। Function App-কে VNet-এর ভিতরে রাখে। Function public internet থেকে আর পৌঁছানো যায় না — শুধু VNet বা connected network থেকে।</li>
+  </ul>
+
+  <div class="callout callout-orange">
+    <div class="callout-label">Important — VNet Integration ≠ Private Endpoint</div>
+    <ul>
+      <li><strong>VNet Integration</strong> = outbound networking। Function private resources reach করতে পারে।</li>
+      <li><strong>Private Endpoint</strong> = inbound networking। অন্যরা VNet-এর private IP দিয়ে Function reach করতে পারে।</li>
+      <li>সম্পূর্ণ private Function-এর জন্য <strong>দুটোই</strong> লাগে: Private Endpoint (inbound private) + VNet Integration (outbound private dependencies reach করতে)।</li>
+    </ul>
+  </div>
+
+  <hr class="section-rule" />
+
+  <!-- Q23 -->
+  <div class="question-block">
+    <div class="q-label">Q23</div>
+    <div class="q-text">Private Function App Scenario — Design the Architecture</div>
+  </div>
+
+  <p><strong>Requirement:</strong> একটি Function App publicly accessible হবে না এবং একটি private Azure SQL database, private Service Bus, ও private Key Vault securely access করবে। একটি internal system (same VNet-এ চলছে) Function-টি call করতে পারবে।</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Complete Private Function App Architecture</div>
+    <pre>
+Internal Client (VNet বা ExpressRoute-এ)
+        │
+        │ Function-কে PRIVATE IP দিয়ে call করে (Private Endpoint দিয়ে)
+        ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  VNet: 10.0.0.0/16                                               │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  Function App Private Endpoint (subnet: 10.0.1.0/24)       │ │
+│  │  Private IP: 10.0.1.10                                      │ │
+│  │  Public endpoint নেই                                        │ │
+│  └────────────────────────┬────────────────────────────────────┘ │
+│                           │                                      │
+│  ┌─────────────────────────▼───────────────────────────────────┐ │
+│  │  Function App Worker (VNet Integrated, subnet: 10.0.2.0/24) │ │
+│  │  Outbound via VNet Integration                              │ │
+│  └──────┬─────────────────────┬──────────────────┬─────────────┘ │
+│         │                     │                  │               │
+│         ▼                     ▼                  ▼               │
+│  Azure SQL          Azure Service Bus      Azure Key Vault       │
+│  (Private EP)       (Private EP)           (Private EP)          │
+│  10.0.3.10          10.0.3.11              10.0.3.12             │
+└──────────────────────────────────────────────────────────────────┘
+
+DNS: Private DNS Zones, *.database.windows.net ইত্যাদি private IP-তে resolve করে
+Identity: Function App System-assigned Managed Identity + RBAC ব্যবহার করে
+    </pre>
+  </div>
+
+  <p><strong>এই architecture কাজ করার কারণ:</strong></p>
+  <ul>
+    <li><strong>Function App-এ Private Endpoint</strong>: public endpoint সরিয়ে দেয়। Function শুধু VNet-এর private IP দিয়ে reachable।</li>
+    <li><strong>VNet Integration</strong>: Function-এর outbound traffic VNet দিয়ে route হয়, SQL, Service Bus, Key Vault-এর private endpoint reach করতে পারে।</li>
+    <li><strong>Private DNS Zones</strong>: <code>*.database.windows.net</code>, <code>*.servicebus.windows.net</code>, <code>*.vault.azure.net</code>-এর DNS query private IP-তে resolve হয়, তাই Function private endpoint reach করে।</li>
+    <li><strong>Managed Identity + RBAC</strong>: কোনো credential store না করেই Function এই resources-এ authenticate করে।</li>
+    <li><strong>Premium বা Dedicated plan প্রয়োজন</strong>: Consumption plan-এ VNet support সীমিত; Function App-এ Private Endpoint-এর জন্য Premium বা Dedicated দরকার।</li>
+  </ul>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch08</h4>
+    <ul>
+      <li><strong>VNet Integration</strong> = outbound traffic control। Function private resources reach করতে পারে।</li>
+      <li><strong>Private Endpoint (Function-এ)</strong> = inbound restriction। Function-এর কোনো public endpoint নেই।</li>
+      <li><strong>Access Restrictions</strong> = public endpoint-এর জন্য IP allowlist/denylist।</li>
+      <li>সম্পূর্ণ private Function App-এর জন্য: Private Endpoint + VNet Integration + Private DNS Zones।</li>
+      <li>Full private networking-এর জন্য Premium বা Dedicated plan দরকার।</li>
+      <li><strong>Interview trap</strong>: "VNet Integration আমার Function-কে private করে" → শুধু outbound-এর জন্য। Inbound-এর জন্য Private Endpoint দরকার।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 08 -->
+
+<!-- ============================================================
+     CHAPTER 09 – LOGGING & MONITORING
+     ============================================================ -->
+<section class="chapter" id="ch09">
+  <div class="chapter-header">
+    <div class="ch-num">09</div>
+    <div>
+      <div class="ch-title">Logging &amp; Monitoring</div>
+      <div class="ch-sub">ILogger · Structured Logging · Application Insights · Failure Investigation</div>
+    </div>
+  </div>
+
+  <!-- Q24 -->
+  <div class="question-block">
+    <div class="q-label">Q24</div>
+    <div class="q-text">Production Logging &amp; Monitoring — ILogger, App Insights, Troubleshooting</div>
+  </div>
+
+  <h3>ILogger — Structured Logging</h3>
+  <p>Azure Functions-এ <code>Console.WriteLine</code> ব্যবহার করো না। <code>ILogger&lt;T&gt;</code> ব্যবহার করো। এটা Application Insights-এর সাথে integrate হয়, structured log লেখে, এবং log level configuration মেনে চলে।</p>
+
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">Functions/OrderFunction.cs — Structured Logging</span>
+      <span class="lang-badge">C# · ILogger Structured</span>
+    </div>
+    <pre><code><span class="cm">// BAD: string interpolation — structure হারিয়ে যায়</span>
+<span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">$"Processing order {orderId} for customer {customerId}"</span>);
+
+<span class="cm">// GOOD: named parameter দিয়ে structured logging</span>
+<span class="cm">// Application Insights OrderId ও CustomerId queryable dimension হিসেবে store করে</span>
+<span class="vr">_logger</span>.<span class="mt">LogInformation</span>(
+    <span class="st">"Processing order. OrderId={OrderId}, CustomerId={CustomerId}"</span>,
+    <span class="vr">orderId</span>, <span class="vr">customerId</span>);
+
+<span class="cm">// Log levels: সঠিকভাবে ব্যবহার করো</span>
+<span class="vr">_logger</span>.<span class="mt">LogDebug</span>(<span class="st">"বিস্তারিত trace, শুধু dev debugging-এর জন্য"</span>);
+<span class="vr">_logger</span>.<span class="mt">LogInformation</span>(<span class="st">"Normal flow events"</span>);
+<span class="vr">_logger</span>.<span class="mt">LogWarning</span>(<span class="st">"অপ্রত্যাশিত কিন্তু recoverable কিছু ঘটেছে"</span>);
+<span class="vr">_logger</span>.<span class="mt">LogError</span>(<span class="vr">ex</span>, <span class="st">"Operation failed. OrderId={OrderId}"</span>, <span class="vr">orderId</span>);
+<span class="vr">_logger</span>.<span class="mt">LogCritical</span>(<span class="st">"Application unrecoverable state-এ আছে"</span>);
+
+<span class="cm">// BeginScope: একটি block-এর সব log-এ context property attach করো</span>
+<span class="kw">using</span> (<span class="vr">_logger</span>.<span class="mt">BeginScope</span>(<span class="kw">new</span> <span class="tp">Dictionary</span>&lt;<span class="tp">string</span>, <span class="tp">object</span>&gt;
+{
+    [<span class="st">"CorrelationId"</span>] = <span class="vr">correlationId</span>,
+    [<span class="st">"UserId"</span>] = <span class="vr">userId</span>
+}))
+{
+    <span class="cm">// এই block-এর ভিতরের সব log-এ CorrelationId ও UserId dimension হিসেবে থাকবে</span>
+    <span class="kw">await</span> <span class="vr">_orderService</span>.<span class="mt">ProcessAsync</span>(<span class="vr">orderId</span>);
+}</code></pre>
+  </div>
+
+  <h3>Application Insights Integration</h3>
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">Program.cs — Application Insights setup</span>
+      <span class="lang-badge">C#</span>
+    </div>
+    <pre><code>.<span class="mt">ConfigureServices</span>((<span class="vr">context</span>, <span class="vr">services</span>) =>
+{
+    <span class="cm">// App Insights telemetry enable করে: requests, dependencies, exceptions, logs</span>
+    <span class="vr">services</span>.<span class="mt">AddApplicationInsightsTelemetryWorkerService</span>();
+    <span class="vr">services</span>.<span class="mt">ConfigureFunctionsApplicationInsights</span>();
+})</code></pre>
+  </div>
+
+  <p>App Settings-এ <code>APPLICATIONINSIGHTS_CONNECTION_STRING</code> set করো। App Insights তারপর automatically capture করে:</p>
+  <ul>
+    <li><strong>Request telemetry</strong>: প্রতিটি Function invocation (duration, success/failure)</li>
+    <li><strong>Dependency telemetry</strong>: outbound HTTP call, database query, Service Bus call</li>
+    <li><strong>Exception telemetry</strong>: unhandled exception সহ full stack trace</li>
+    <li><strong>Custom events/metrics</strong>: প্রয়োজনে <code>TelemetryClient</code> দিয়ে</li>
+  </ul>
+
+  <h3>Production-এ Failure Investigation</h3>
+
+  <div class="diagram">
+    <div class="diagram-title">Application Insights-এ Failure Investigation Flow</div>
+    <pre>
+Alert fires / User failure report করে
+    │
+    ▼
+Application Insights → Failures blade
+    │  Failed requests, exceptions, dependency failures দেখায়
+    │
+    ▼
+Failed request-এ click করো → End-to-end transaction
+    │  দেখায়: Function invocation → dependency calls → exceptions
+    │  Timeline view: কোথায় সময় গেছে
+    │
+    ▼
+Failure point চিহ্নিত করো:
+    ├── Exception? → Exceptions blade → stack trace
+    ├── Slow dependency? → Dependencies → ধীর DB/HTTP call খোঁজো
+    ├── Config issue? → config read error-এর জন্য log দেখো
+    └── Auth issue? → dependency call-এ 401/403
+    │
+    ▼
+Log Analytics-এ Kusto দিয়ে query করো:
+    exceptions
+    | where timestamp > ago(1h)
+    | where outerMessage contains "OrderId"
+    | project timestamp, outerMessage, customDimensions
+    </pre>
+  </div>
+
+  <div class="callout callout-green">
+    <div class="callout-label">Best Practice — Correlation ID</div>
+    <p>প্রতিটি request-এর entry point-এ একটি <code>CorrelationId</code> generate করো (অথবা caller যদি header-এ দিয়ে থাকে সেটা read করো)। সব service call-এ পাস করো, প্রতিটি log statement-এ log করো। এটা দিয়ে একটি request-এর সমস্ত log track করা যায়, এমনকি বিভিন্ন service জুড়েও। Middleware দিয়ে automatically log scope-এ attach করো (Ch03 দেখো)।</p>
+  </div>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch09</h4>
+    <ul>
+      <li>সবসময় <code>ILogger&lt;T&gt;</code> ব্যবহার করো। কখনো <code>Console.WriteLine</code> নয়।</li>
+      <li><strong>Structured logging</strong>: named param-সহ message template ব্যবহার করো, string interpolation নয়। App Insights param-গুলো queryable dimension হিসেবে store করে।</li>
+      <li>App Insights capture করে: requests, dependencies, exceptions, custom events/metrics — package এবং connection string যোগ করলেই automatically।</li>
+      <li><strong>CorrelationId</strong>: request entry-তে generate করো, সর্বত্র pass করো, সর্বত্র log করো। Failure trace করতে অপরিহার্য।</li>
+      <li>Debug noise থেকে App Insights বাঁচাতে <code>host.json</code>-এ minimum log level set করো।</li>
+      <li><strong>Interview tip</strong>: Production troubleshooting-এর জন্য App Insights → Failures → failed request-এ click → end-to-end transaction দেখো। পুরো picture পাবে।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 09 -->
+
+<!-- ============================================================
+     CHAPTER 10 – DEPLOYMENT
+     ============================================================ -->
+<section class="chapter" id="ch10">
+  <div class="chapter-header">
+    <div class="ch-num">10</div>
+    <div>
+      <div class="ch-title">Deployment</div>
+      <div class="ch-sub">Build · Publish · CI/CD · App Settings · Deployment Slots · Production Considerations</div>
+    </div>
+  </div>
+
+  <!-- Q25 -->
+  <div class="question-block">
+    <div class="q-label">Q25</div>
+    <div class="q-text">Function App Deployment — Build, Publish, Configure, Deploy</div>
+  </div>
+
+  <h3>Build এবং Publish</h3>
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">Deployment commands</span>
+      <span class="lang-badge">CLI</span>
+    </div>
+    <pre><code><span class="cm"># Release build</span>
+dotnet build --configuration Release
+
+<span class="cm"># Publish folder-এ (deployment artifact তৈরি করে)</span>
+dotnet publish --configuration Release --output ./publish
+
+<span class="cm"># Azure Functions Core Tools দিয়ে deploy করো</span>
+func azure functionapp publish &lt;function-app-name&gt; --dotnet-isolated
+
+<span class="cm"># অথবা az cli zip deploy ব্যবহার করো</span>
+az functionapp deployment source config-zip \
+  --name my-function-app \
+  --resource-group my-rg \
+  --src ./publish.zip</code></pre>
+  </div>
+
+  <h3>Deployment-এর সময় App Settings Set করা (CI/CD Pipeline)</h3>
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">GitHub Actions — deploy and configure</span>
+      <span class="lang-badge">YAML · GitHub Actions</span>
+    </div>
+    <pre><code><span class="vr">name</span>: Deploy Function App
+
+<span class="vr">on</span>:
+  <span class="vr">push</span>:
+    <span class="vr">branches</span>: [main]
+
+<span class="vr">jobs</span>:
+  <span class="vr">deploy</span>:
+    <span class="vr">runs-on</span>: ubuntu-latest
+    <span class="vr">steps</span>:
+      - <span class="vr">uses</span>: actions/checkout@v3
+
+      - <span class="vr">name</span>: Build
+        <span class="vr">run</span>: dotnet publish --configuration Release --output ./publish
+
+      <span class="cm"># Deploy করার আগে App Settings set করো</span>
+      - <span class="vr">name</span>: Configure App Settings
+        <span class="vr">uses</span>: azure/appservice-settings@v1
+        <span class="vr">with</span>:
+          <span class="vr">app-name</span>: my-function-app
+          <span class="vr">app-settings-json</span>: |
+            [
+              { "name": "App__ExternalApiBaseUrl", "value": "${{ secrets.PROD_API_URL }}" },
+              { "name": "App__BlobStorageUri",  "value": "${{ secrets.PROD_BLOB_URI }}" }
+            ]
+
+      - <span class="vr">name</span>: Deploy
+        <span class="vr">uses</span>: azure/functions-action@v1
+        <span class="vr">with</span>:
+          <span class="vr">app-name</span>: my-function-app
+          <span class="vr">package</span>: ./publish</code></pre>
+  </div>
+
+  <div class="callout callout-orange">
+    <div class="callout-label">Important — Pipeline Variable-এ Secret রেখো না</div>
+    <p><code>App__ExternalApiBaseUrl</code>-এর মতো non-sensitive App Settings pipeline variable থেকে আসতে পারে। কিন্তু secrets (passwords, connection strings) <strong>Key Vault</strong> থেকে Key Vault references হিসেবে App Settings-এ আসা উচিত — plain text pipeline secret হিসেবে inject করা উচিত নয়।</p>
+  </div>
+
+  <h3>Deployment Slots — Zero-Downtime Deployments</h3>
+  <p>Deployment Slots-এর মাধ্যমে আগে "staging" slot-এ deploy করো, test করো, তারপর staging → production atomically swap করো। Swap instant (শুধু traffic redirect হয়)। কিছু ভুল হলে swap back করো।</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Deployment Slot Swap</div>
+    <pre>
+Staging slot-এ deploy করো
+    │
+    ▼
+Staging slot test করো (warm-up, smoke tests)
+    │
+    ▼
+Slot Swap (staging ↔ production)
+    │  Azure সব নতুন request নতুন version-এ redirect করে
+    │  পুরনো version এখন staging slot-এ (rollback-এর জন্য ready)
+    ▼
+Production monitor করো
+    │
+    ▼
+কিছু ভুল হলে → instant swap back (rollback)
+    </pre>
+  </div>
+
+  <div class="callout callout-yellow">
+    <div class="callout-label">What If — Slot-Specific Settings</div>
+    <p>কিছু App Settings swap হওয়া উচিত নয় (যেমন প্রতিটি environment-এর নিজস্ব database connection string)। এগুলো portal-এ <strong>"Deployment slot setting"</strong> হিসেবে mark করো। Slot-sticky settings swap-এর সময় slot-এর সাথেই থাকে — code-এর সাথে যায় না। এতে staging code production database-এ accidentally connect হওয়া থেকে বাঁচে।</p>
+  </div>
+
+  <div class="revision-box">
+    <h4>⚡ Quick Revision — Ch10</h4>
+    <ul>
+      <li><code>dotnet publish --configuration Release</code> দিয়ে build করো। <code>func azure functionapp publish</code> বা <code>az functionapp deployment source config-zip</code> দিয়ে deploy করো।</li>
+      <li>Azure CLI বা pipeline দিয়ে App Settings set করো — code-এ hardcode করো না।</li>
+      <li>Secrets → App Settings-এ Key Vault references। Pipeline-এর plain text variable নয়।</li>
+      <li><strong>Deployment Slots</strong>: staging-এ deploy করো, test করো, তারপর production-এ swap করো। Instant rollback available।</li>
+      <li>Sensitive/environment-specific settings <strong>slot-sticky</strong> হিসেবে mark করো যাতে code-এর সাথে swap না হয়।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 10 -->
+
+<!-- ============================================================
+     CHAPTER 11 – PRODUCTION-READY FUNCTION APP
+     ============================================================ -->
+<section class="chapter" id="ch11">
+  <div class="chapter-header">
+    <div class="ch-num">11</div>
+    <div>
+      <div class="ch-title">Production-Ready Function App</div>
+      <div class="ch-sub">Local → Production Checklist — Everything That Changes</div>
+    </div>
+  </div>
+
+  <!-- Q26 -->
+  <div class="question-block">
+    <div class="q-label">Q26</div>
+    <div class="q-text">Local to Production — What Must Change Before Going Live?</div>
+  </div>
+
+  <p>Function App locally build ও test করেছো। Production-এ deploy করার আগে এই সব জিনিস review করতে হবে এবং অনেক ক্ষেত্রে পরিবর্তন করতে হবে:</p>
+
+  <table class="compare-table">
+    <thead><tr><th>Area</th><th>Local</th><th>Production</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Configuration</strong></td>
+        <td>Dev values সহ <code>local.settings.json</code></td>
+        <td>Azure App Settings (env vars)। Local file নেই।</td>
+      </tr>
+      <tr>
+        <td><strong>Authentication</strong></td>
+        <td>সুবিধার জন্য Anonymous বা Function Key</td>
+        <td>User-facing API-এর জন্য Entra ID + JWT; trusted internal service-এর জন্য শুধু Keys</td>
+      </tr>
+      <tr>
+        <td><strong>Credentials</strong></td>
+        <td><code>DefaultAzureCredential</code> → VS/CLI login</td>
+        <td><code>DefaultAzureCredential</code> → Managed Identity। Code পরিবর্তন লাগে না।</td>
+      </tr>
+      <tr>
+        <td><strong>Secrets</strong></td>
+        <td>local.settings.json-এ dev values</td>
+        <td>App Settings-এ Key Vault references। কখনো plain text secret নয়।</td>
+      </tr>
+      <tr>
+        <td><strong>CORS</strong></td>
+        <td>localhost:3000 allowed</td>
+        <td>শুধু exact production origins। Wildcard নেই।</td>
+      </tr>
+      <tr>
+        <td><strong>Networking</strong></td>
+        <td>Open — localhost</td>
+        <td>Exposure requirement অনুযায়ী Access Restrictions বা Private Endpoint</td>
+      </tr>
+      <tr>
+        <td><strong>Hosting</strong></td>
+        <td>Local Functions runtime (func start)</td>
+        <td>Plan select করো: Consumption (cost), Premium (performance/networking), Dedicated</td>
+      </tr>
+      <tr>
+        <td><strong>Scaling</strong></td>
+        <td>Single instance</td>
+        <td>Max scale-out, concurrency settings, dependency capacity review করো</td>
+      </tr>
+      <tr>
+        <td><strong>Error Handling</strong></td>
+        <td>Exception locally surface করে</td>
+        <td>Global middleware exception catch করে, log করে, proper 500 response দেয়</td>
+      </tr>
+      <tr>
+        <td><strong>Logging</strong></td>
+        <td>Console output, verbose</td>
+        <td>Application Insights। Appropriate log level। CorrelationId সহ structured logging।</td>
+      </tr>
+      <tr>
+        <td><strong>DI Lifetimes</strong></td>
+        <td>যেকোনো lifetime-এ প্রায়ই কাজ করে</td>
+        <td>Scale-out behavior-এর জন্য Singleton/Scoped/Transient choice verify করো</td>
+      </tr>
+      <tr>
+        <td><strong>In-Memory State</strong></td>
+        <td>ঠিকঠাক কাজ করে (single instance)</td>
+        <td>External store ব্যবহার করতে হবে। In-memory state scale-out/restart-এ হারিয়ে যায়।</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-green">
+    <div class="callout-label">Production Readiness Checklist</div>
+    <ul>
+      <li>☐ Code, App Settings বা git-এ কোনো secret নেই</li>
+      <li>☐ Managed Identity enabled, RBAC roles assigned</li>
+      <li>☐ Secret-এর জন্য Key Vault references ব্যবহার করা হয়েছে</li>
+      <li>☐ Global exception handling middleware আছে</li>
+      <li>☐ Application Insights connection string configured</li>
+      <li>☐ সর্বত্র CorrelationId সহ Structured logging</li>
+      <li>☐ Exact origins দিয়ে CORS configured (wildcard নেই)</li>
+      <li>☐ Access Restrictions বা Private Endpoint configured</li>
+      <li>☐ Production need অনুযায়ী Hosting plan নির্বাচিত</li>
+      <li>☐ Zero-downtime deployment-এর জন্য Deployment slots configured</li>
+      <li>☐ কোনো in-memory state নেই (external cache/store ব্যবহার করা হয়েছে)</li>
+      <li>☐ Scale-out correctness-এর জন্য DI service lifetimes reviewed</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 11 -->
+
+<!-- ============================================================
+     CHAPTER 12 – TRICKY INTERVIEW QUESTIONS
+     ============================================================ -->
+<section class="chapter" id="ch12">
+  <div class="chapter-header">
+    <div class="ch-num">12</div>
+    <div>
+      <div class="ch-title">Tricky Interview Questions</div>
+      <div class="ch-sub">Q27–Q36 — গভীর বোঝার প্রমাণ দেওয়া উত্তর</div>
+    </div>
+  </div>
+
+  <div class="question-block">
+    <div class="q-label">Q27</div>
+    <div class="q-text">What is the difference between a Function and a Function App? What is shared by Functions inside the same Function App?</div>
+  </div>
+  <p><strong>Function App</strong> = Azure resource এবং deployment unit। এক বা একাধিক Function ধারণ করার container। <strong>Function</strong> = ঠিক একটি trigger সহ individual code unit।</p>
+  <p>একই Function App-এর ভিতরের সব Function share করে: <strong>App Settings</strong> (configuration), <strong>Managed Identity</strong>, <strong>Hosting Plan</strong> (এবং এর compute), <strong>runtime version</strong>, এবং host coordination-এর জন্য ব্যবহৃত <strong>storage account</strong>। তারা আলাদা deployment pipeline share করে না — Function App deploy করলে সব Functions একসাথে deploy হয়।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q28</div>
+    <div class="q-text">Can one Azure Function have multiple triggers? Can one Function App contain Functions with different trigger types?</div>
+  </div>
+  <p><strong>একটি Function-এ ঠিক একটি trigger।</strong> দুটো trigger সহ একটি Function allowed নয় — এটা Functions-এর single-responsibility model লঙ্ঘন করে।</p>
+  <p><strong>একটি Function App-এ বিভিন্ন trigger type-এর Functions থাকতে পারে।</strong> একই Function App-এ একটি HTTP-triggered Function, একটি Timer-triggered Function, এবং একটি Service Bus-triggered Function থাকতে পারে — তারা একই hosting plan এবং configuration share করে।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q29</div>
+    <div class="q-text">What is the difference between scaling and concurrency?</div>
+  </div>
+  <p><strong>Scaling</strong> = আরো worker process instance যোগ করা। Compute node multiply করে মোট capacity বাড়ায়।</p>
+  <p><strong>Concurrency</strong> = একটি instance একসাথে কতগুলো operation handle করতে পারে। একটি instance async/await ব্যবহার করে (thread block না করে) multiple request process করতে পারে।</p>
+  <p>উদাহরণ: ৩টি instance × ১০টি concurrent request = ৩০টি total simultaneous request। কিন্তু তোমার database-কে একসাথে ৩০টি handle করতে হবে — scaling তোমার dependencies automatically scale করে না।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q30</div>
+    <div class="q-text">If a service is registered as Singleton, is that object shared across every scaled-out Function App instance?</div>
+  </div>
+  <p><strong>না।</strong> Singleton মানে "প্রতি worker process-এ একটি instance"। প্রতিটি scaled-out worker process-এর নিজস্ব DI container আছে। ৫টি instance = ৫টি আলাদা Singleton object, প্রতিটি নিজের process-এ। Singleton instances-এর মধ্যে globally shared হয় না। এই কারণেই Singleton-এর in-memory cache scale-এ unreliable — আলাদা instances-এ আলাদা cache থাকে।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q31</div>
+    <div class="q-text">Why might a Function work locally but fail after deployment to Azure?</div>
+  </div>
+  <p>সবচেয়ে সাধারণ root causes, ঘটনার ক্রম অনুযায়ী:</p>
+  <ol>
+    <li><strong>Configuration</strong>: App Setting Azure-এ missing বা <code>local.settings.json</code>-এর চেয়ে আলাদা নাম</li>
+    <li><strong>Identity / RBAC</strong>: Locally VS/CLI credential ব্যবহার হয় যার হয়তো broad access আছে। Azure-এ Managed Identity-কে প্রতিটি resource-এ explicit RBAC role assignment দরকার।</li>
+    <li><strong>Networking</strong>: Locally code সরাসরি public endpoint reach করে। Azure-এ target resource-এ Private Endpoint বা firewall থাকলে Function-এর VNet Integration দরকার।</li>
+    <li><strong>Runtime/Environment</strong>: আলাদা .NET runtime version, আলাদা OS (Windows vs Linux)</li>
+    <li><strong>Dependencies</strong>: Package না পাওয়া, publish-এর পরে DLL mismatch</li>
+  </ol>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q32</div>
+    <div class="q-text">Does Managed Identity work directly as your local developer identity? How does DefaultAzureCredential allow the same code to work locally and in Azure?</div>
+  </div>
+  <p><strong>Managed Identity locally কাজ করে না।</strong> এটার জন্য Azure Instance Metadata Service (IMDS) দরকার, যা শুধুমাত্র Azure compute resource-এর ভিতরে থাকে।</p>
+  <p><code>DefaultAzureCredential</code> multiple credential source try করে এই সমস্যা সমাধান করে। Locally এটা Visual Studio, VS Code, বা Azure CLI login খুঁজে পায় এবং সেটা ব্যবহার করে। Azure-এ এটা IMDS দিয়ে Managed Identity খুঁজে পায়। একই code — runtime-এ নীরবে আলাদা credential resolve হয়।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q33</div>
+    <div class="q-text">Is a Function Key enough to secure every production HTTP Function?</div>
+  </div>
+  <p><strong>না, সব scenario-তে নয়।</strong> Function Keys static secret যা automatically expire হয় না, কোনো identity information বহন করে না, এবং compromise হলে সব callers-এ rotate করা কঠিন। এগুলো বলে না WHO call করেছে — শুধু বলে তাদের কাছে key ছিল।</p>
+  <p>Function Keys ব্যবহার করো: known internal service-এর মধ্যে simple machine-to-machine call-এর জন্য যেখানে key securely Key Vault-এ stored।</p>
+  <p>Entra ID + JWT ব্যবহার করো: user-facing API, cross-tenant scenario, claims/roles দরকার হলে, বা কে কী call করেছে তার audit trail দরকার হলে।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q34</div>
+    <div class="q-text">What happens to static variables, Singleton objects, and in-memory cache when a Function App scales out or restarts?</div>
+  </div>
+  <ul>
+    <li><strong>Scale-out</strong>: নতুন worker process তৈরি হয়। এটা নিজের <code>Program.cs</code> run করে, নিজের DI container build করে, নিজের Singleton instance তৈরি করে। Static variables এবং in-memory data নতুন instance-এ fresh (empty)। পুরনো instance নিজের data নিয়ে চলতে থাকে।</li>
+    <li><strong>Restart</strong>: Worker process kill ও restart হয়। সব in-memory data — static variables, Singleton state, in-memory cache — হারিয়ে যায়।</li>
+    <li><strong>উপসংহার</strong>: Critical data-এর জন্য কখনো in-memory state-এর উপর নির্ভর করো না। Redis, Cosmos DB, Table Storage, বা অন্য durable store ব্যবহার করো।</li>
+  </ul>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q35</div>
+    <div class="q-text">Should an Azure Function store application state in memory? What problems can occur?</div>
+  </div>
+  <p><strong>না।</strong> Functions stateless হওয়ার জন্য design করা। Memory-তে state রাখলে এই সমস্যা হয়:</p>
+  <ul>
+    <li><strong>Scale-out inconsistency</strong>: Request 1 Instance 1-এর memory-তে state লেখে। Request 2 Instance 2-তে যায় — Instance 1-এর state দেখতে পায় না। Data আলাদা user-এর কাছে আলাদা বা মিলিয়ে যাচ্ছে মনে হয়।</li>
+    <li><strong>Restart/scale-in-এ হারিয়ে যাওয়া</strong>: Consumption plan idle-এ zero-তে scale করে — সব in-memory data চলে যায়।</li>
+    <li><strong>Sharing নেই</strong>: একই Function App-এর দুটো Function যদি same state দরকার হয়, তাদের প্রতিটির আলাদা memory — কোনো sharing নেই।</li>
+  </ul>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q36</div>
+    <div class="q-text">If two Functions exist inside the same Function App, are they completely independent applications? What do they share?</div>
+  </div>
+  <p>তারা সম্পূর্ণ independent নয়। তারা একই worker process(es)-এ চলে, একই DI container share করে, App Settings share করে, Managed Identity share করে, এবং hosting plan resources (CPU, memory) share করে।</p>
+  <p>তারা share করে না: তাদের trigger (প্রতিটির ঠিক একটি), তাদের execution context (প্রতিটি invocation independent), তাদের response (প্রতিটি নিজের request/message handle করে)।</p>
+  <p><strong>গুরুত্বপূর্ণ implication</strong>: একটি Function-এর memory leak বা CPU-intensive loop একই Function App-এর অন্য সব Function-এর performance খারাপ করতে পারে। এজন্যই বড় Function App-গুলো domain বা criticality অনুযায়ী ভাগ করা উচিত।</p>
+
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 12 -->
+
+<!-- ============================================================
+     CHAPTER 13 – SCENARIO-BASED QUESTIONS
+     ============================================================ -->
+<section class="chapter" id="ch13">
+  <div class="chapter-header">
+    <div class="ch-num">13</div>
+    <div>
+      <div class="ch-title">Scenario-Based Questions</div>
+      <div class="ch-sub">Q37–Q43 — বাস্তব সমস্যা, বাস্তব সমাধান</div>
+    </div>
+  </div>
+
+  <div class="question-block">
+    <div class="q-label">Q37</div>
+    <div class="q-text">Sudden Traffic Spike — HTTP Function overwhelmed</div>
+  </div>
+  <p><strong>Scenario:</strong> তোমার HTTP Function সাধারণত প্রতি মিনিটে ১০টি request পায়। একটি marketing campaign launch হয় এবং হঠাৎ প্রতি মিনিটে ১০,০০০ request আসে। Users slow response ও error দেখছে।</p>
+
+  <div class="flow">
+    <div class="flow-step"><div class="flow-box">Scale controller বর্ধিত HTTP queue depth detect করে</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">নতুন instance spin up হয় (প্রথম spike-এ cold start)</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Check করো: bottleneck Function-এ, নাকি downstream-এ?</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">App Insights → Performance → ধীর dependencies খোঁজো</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Database connection pool exhausted? → DB scale করো বা connection pooling যোগ করো</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">External API ধীর? → timeout যোগ করো, circuit breaker, async queue offload</div></div>
+  </div>
+
+  <p><strong>যা review করতে হবে:</strong> hosting plan (Consumption vs Premium), <code>host.json</code>-এ concurrency settings, database connection limits, external API timeout, কাজটি async করা যায় কিনা (queue offloading)।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q38</div>
+    <div class="q-text">Function Is Slow Only in Production</div>
+  </div>
+  <p><strong>Scenario:</strong> তোমার Function locally 50ms-এ execute হয় কিন্তু Azure-এ ৩+ সেকেন্ড লাগে।</p>
+  <p><strong>Investigation steps:</strong></p>
+  <ol>
+    <li><strong>Cold start?</strong> Slow execution গুলো প্রথম invocation কিনা দেখো। Consumption plan-এ থাকলে → Premium-এ switch করো বা minimum instances configure করো।</li>
+    <li><strong>Dependencies-এ network latency</strong>: Azure-এ Function ও database আলাদা region-এ থাকতে পারে। App Insights-এ dependency telemetry দেখো।</li>
+    <li><strong>DNS resolution</strong>: Private Endpoint ব্যবহার করলে, proper Private DNS Zones configure না থাকলে DNS slow হতে পারে।</li>
+    <li><strong>Configuration বা init কাজ</strong>: Startup-এ একবার করার (Singleton) কোনো কাজ কি per-invocation করা হচ্ছে?</li>
+    <li><strong>Garbage collection / memory pressure</strong>: App Insights metrics-এ memory consumption দেখো।</li>
+    <li><strong>External API calls</strong>: Azure-এর IP range থেকে কোনো external API কি ধীর? আলাদা region-এ test করো।</li>
+  </ol>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q39</div>
+    <div class="q-text">Works Locally but Fails in Azure</div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Troubleshooting Flow — Locally কাজ করে, Azure-এ Fail করে</div>
+    <pre>
+এই ক্রমে check করো:
+    │
+    ├─► Configuration: App Setting কি Azure-এ EXACT same key name দিয়ে set আছে?
+    │   (Double underscore, case sensitivity দেখো)
+    │
+    ├─► Identity/RBAC: Managed Identity-এর কি প্রয়োজনীয় RBAC role আছে?
+    │   (Storage Blob Data Contributor, Service Bus Data Sender, ইত্যাদি)
+    │
+    ├─► Networking: Target resource কি Private Endpoint বা firewall-এর পিছনে?
+    │   (Function-এ VNet Integration আছে? DNS private IP-তে resolve হচ্ছে?)
+    │
+    ├─► Runtime: Azure-এর .NET version কি project-এর target framework-এর সাথে match করে?
+    │   (FUNCTIONS_WORKER_RUNTIME এবং FUNCTIONS_EXTENSION_VERSION check করো)
+    │
+    ├─► Dependencies: সব required package deploy হয়েছে? কোনো DLL resolution error?
+    │   (Kudu / deployment log দেখো)
+    │
+    └─► Application Insights: exceptions blade-এ actual error দেখো।
+        (Azure error প্রায়ই "এটা কাজ করছে না"-এর চেয়ে বেশি specific)
+    </pre>
+  </div>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q40</div>
+    <div class="q-text">External API Becomes Slow or Unavailable</div>
+  </div>
+  <p><strong>Scenario:</strong> তোমার HTTP Function একটি external payment API call করে। সেই API ৩০ সেকেন্ড করে respond করছে বা timeout হচ্ছে।</p>
+  <p><strong>এতে যে সমস্যা হয়:</strong> Function thread response-এর জন্য blocked হয়ে থাকে। Functions queued request handle করতে scale out হয়। শেষপর্যন্ত সব instance আটকে থাকে → পুরো Function App unresponsive।</p>
+  <p><strong>সমাধান:</strong></p>
+  <ul>
+    <li><strong>Timeout</strong>: <code>HttpClient.Timeout</code> set করো (যেমন ৫ সেকেন্ড)। ৩০ সেকেন্ড block না করে দ্রুত 503/Retry-After return করো।</li>
+    <li><strong>Circuit Breaker</strong> (Polly): N consecutive failure-এর পরে circuit খুলে দাও এবং API না call করেই fast fail করো। Cascade failure প্রতিরোধ করে।</li>
+    <li><strong>Async offloading</strong>: External API synchronously call করো না। Request accept করো, কাজ queue করো, 202 Accepted return করো। API recover হলে asynchronously process করো।</li>
+    <li><strong>Retry with backoff</strong>: Transient failure-এর জন্য Polly retry with exponential backoff।</li>
+  </ul>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q41</div>
+    <div class="q-text">Long-Running HTTP Function — Async Redesign</div>
+  </div>
+  <p><strong>সমস্যা:</strong> তোমার HTTP Function ৫ মিনিটের report generation করে। Client timeout করছে। Execution timeout Function kill করতে পারে।</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Async Offload Pattern</div>
+    <pre>
+Client
+  │
+  │  POST /api/reports   (synchronous HTTP call)
+  ▼
+HTTP Function
+  │
+  │  1. Request validate করো (দ্রুত, &lt;100ms)
+  │  2. "generate-report" job message queue করো
+  │  3. 202 Accepted + jobId return করো
+  ▼
+Client (jobId রেখে /api/reports/{jobId}/status poll করে)
+
+এরমধ্যে, asynchronously:
+Queue/Service Bus Message → Report Generator Function
+  │
+  │  1. ৫ মিনিটের report generation run করো
+  │  2. Result store করো (Blob, DB)
+  │  3. Job status "complete" update করো
+  ▼
+Client status poll করে → eventually "complete" + download URL পায়
+    </pre>
+  </div>
+
+  <p>এই pattern: long work-কে HTTP response থেকে decouple করে, Function timeout survive করে, failure-এ retry allow করে, এবং independently scale করে।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q42</div>
+    <div class="q-text">Multiple Environments — One Codebase, Four Configurations</div>
+  </div>
+  <p>এটা কাজ করানোর architecture:</p>
+  <ul>
+    <li><strong>Local</strong>: dev values সহ <code>local.settings.json</code> + <code>DefaultAzureCredential</code> → VS/CLI identity</li>
+    <li><strong>Dev Azure</strong>: Dev Function App + Dev App Settings + Dev Managed Identity, Dev resources-এ RBAC সহ</li>
+    <li><strong>QA Azure</strong>: QA Function App + QA App Settings + QA Managed Identity, QA resources-এ RBAC সহ</li>
+    <li><strong>Production Azure</strong>: Prod Function App + Prod App Settings + Prod Managed Identity, Prod resources-এ RBAC সহ</li>
+  </ul>
+  <p>Code পরিবর্তন হয় না। Infrastructure (App Settings, identities, RBAC) প্রতি environment-এ আলাদা। এটা Bicep/Terraform + deployment pipeline দিয়ে manage হয়।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q43</div>
+    <div class="q-text">Hard-Coded Credentials — How to Redesign</div>
+  </div>
+  <p><strong>Scenario:</strong> তুমি আবিষ্কার করলে Function code বা plain text App Settings-এ password ও connection string hardcoded আছে।</p>
+
+  <div class="flow">
+    <div class="flow-step"><div class="flow-box">Code থেকে hardcoded credentials সরাও (প্রয়োজনে git history purge করো)</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Function App-এ System-assigned Managed Identity enable করো</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Azure Key Vault-এ secrets store করো</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Function App-এর Managed Identity-কে Key Vault-এ "Key Vault Secrets User" role দাও</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Plain App Settings-এর বদলে Key Vault references দাও</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Client secret ব্যবহার করা SDK connections-কে DefaultAzureCredential দিয়ে replace করো</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">প্রতিটি target resource-এ প্রয়োজনীয় RBAC roles assign করো</div></div>
+    <div class="flow-arrow">↓</div>
+    <div class="flow-step"><div class="flow-box">Compromise হওয়া সব credentials rotate/revoke করো</div></div>
+  </div>
+
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 13 -->
+
+<!-- ============================================================
+     CHAPTER 14 – ARCHITECTURE-LEVEL QUESTIONS
+     ============================================================ -->
+<section class="chapter" id="ch14">
+  <div class="chapter-header">
+    <div class="ch-num">14</div>
+    <div>
+      <div class="ch-title">Architecture-Level Questions</div>
+      <div class="ch-sub">Q44–Q48 — Design Decisions, Trade-offs, Production Architecture</div>
+    </div>
+  </div>
+
+  <div class="question-block">
+    <div class="q-label">Q44</div>
+    <div class="q-text">Production-Grade Enterprise Function Architecture</div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Production-Grade Enterprise Function App Architecture</div>
+    <pre>
+External Clients (SPA, Mobile, Other Services)
+        │
+        │  HTTPS + JWT (Entra ID)
+        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Azure API Management (optional — centralized API gateway)          │
+│  - Rate limiting, throttling                                        │
+│  - JWT validation                                                   │
+│  - Request routing                                                  │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Function App (Premium Plan — cold start নেই, VNet integrated)       │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  Middleware Pipeline                                        │    │
+│  │  ExceptionHandlingMiddleware → CorrelationId → Auth check   │    │
+│  └────────────────────────┬────────────────────────────────────┘    │
+│                           │                                         │
+│  ┌───────────┐  ┌─────────┴────────┐  ┌───────────────────────┐    │
+│  │ HTTP      │  │ Timer Trigger    │  │ Service Bus Trigger    │    │
+│  │ Functions │  │ (Scheduled jobs) │  │ (Async processing)    │    │
+│  └─────┬─────┘  └────────┬─────────┘  └───────────┬───────────┘    │
+│        └────────────────►│◄──────────────────────►│               │
+│                          ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  Service Layer (IOrderService, IReportService, ইত্যাদি)    │    │
+│  └────────────────────────┬────────────────────────────────────┘    │
+│                           ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  Repository/Client Layer (DB, External API, Blob, Queue)    │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
+        │ VNet Integration (outbound)
+        │
+        ▼
+Private Resources (Private Endpoints):
+├── Azure SQL Database
+├── Azure Service Bus
+├── Azure Blob Storage
+├── Azure Key Vault
+└── External Services (VNet দিয়ে)
+
+Identity: System-assigned Managed Identity + প্রতিটি resource-এ RBAC
+Observability: Application Insights (requests, deps, exceptions, custom metrics)
+Secrets: App Settings-এ Key Vault references
+Deployment: GitHub Actions → staging slot → swap to production
+    </pre>
+  </div>
+
+  <p><strong>প্রতিটি সিদ্ধান্তের কারণ:</strong></p>
+  <ul>
+    <li><strong>Premium plan</strong>: enterprise app cold start tolerate করতে পারে না; private networking-এর জন্য Premium+ দরকার।</li>
+    <li><strong>Middleware-এ auth</strong>: JWT validation middleware-এ একবার হয়, প্রতিটি Function-এ বারবার নয়।</li>
+    <li><strong>Service/Repository layers</strong>: Functions thin থাকে। Business logic Azure-এর বাইরে independently testable।</li>
+    <li><strong>Managed Identity + RBAC</strong>: codebase বা App Settings-এ কোথাও secret নেই।</li>
+    <li><strong>VNet Integration + Private Endpoints</strong>: সব data private network-এর মধ্যে থাকে; backend resources publicly exposed নয়।</li>
+  </ul>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q45</div>
+    <div class="q-text">Large Function App — Code Architecture</div>
+  </div>
+  <p>২০+ Function সহ একটি বড় Function App-এ code structure অত্যন্ত গুরুত্বপূর্ণ:</p>
+  <ul>
+    <li><strong>Functions/</strong> — শুধু thin trigger entry points। প্রতিটি Function class-এ একটি method। কোনো business logic নেই।</li>
+    <li><strong>Services/</strong> — প্রতি domain-এ একটি service (OrderService, PaymentService, NotificationService)। Interface + implementation।</li>
+    <li><strong>Repositories/</strong> — শুধু data access। প্রতিটি aggregate root বা external resource-এর জন্য একটি।</li>
+    <li><strong>Models/</strong> — request/response DTO, domain models।</li>
+    <li><strong>Middleware/</strong> — শুধু cross-cutting concerns।</li>
+    <li><strong>Configuration/</strong> — strongly-typed config-এর জন্য Options classes।</li>
+  </ul>
+  <p>একটি বড় Function App-কে multiple Function App-এ ভাগ করার কথা ভাবো যদি: বিভিন্ন domain-এর আলাদা scaling দরকার হয়, আলাদা security requirement, বা আলাদা deployment cadence।</p>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q46</div>
+    <div class="q-text">Secretless Architecture</div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-title">Secretless Architecture — কোথাও Password নেই</div>
+    <pre>
+Function App
+    │
+    │  DefaultAzureCredential
+    ▼
+Azure Active Directory (Managed Identity)
+    │
+    ├──► Azure SQL (Entra ID auth — password connection string নেই)
+    │    RBAC: db_datareader / db_datawriter on the specific DB
+    │
+    ├──► Azure Blob Storage
+    │    RBAC: Storage Blob Data Contributor on the container
+    │
+    ├──► Azure Service Bus
+    │    RBAC: Azure Service Bus Data Sender/Receiver
+    │
+    └──► Azure Key Vault (তৃতীয় পক্ষের secrets-এর জন্য যেগুলোর এখনো password দরকার)
+         RBAC: Key Vault Secrets User
+
+App Settings: শুধু তৃতীয় পক্ষের credentials-এর জন্য Key Vault references রাখে।
+কোনো plain text password নেই। কোনো credentials সহ connection string নেই। Code-এ zero secret।
+    </pre>
+  </div>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q47</div>
+    <div class="q-text">High-Traffic Function Architecture</div>
+  </div>
+  <p><strong>Requirement:</strong> Unpredictable traffic spike। প্রতি মিনিটে ১০ request এবং ১,০০,০০০ request উভয়ই handle করতে হবে।</p>
+  <ul>
+    <li><strong>Premium plan</strong>: pre-warmed instances spike-এর সময় cold start দূর করে। Demand অনুযায়ী auto-scale হয়।</li>
+    <li><strong>Stateless Functions</strong>: in-memory state নেই মানে যেকোনো instance যেকোনো request handle করতে পারে। পরিষ্কার horizontal scaling।</li>
+    <li><strong>Heavy operation-এ Async</strong>: HTTP Function request accept করে, কাজ queue করে, 202 return করে। আলাদা worker Functions queue process করে। Ingestion থেকে processing decouple হয়।</li>
+    <li><strong>Connection pooling</strong>: <code>HttpClient</code> Singleton হিসেবে (factory দিয়ে)। Database connection pooling। Scale-out-এ connection exhaustion প্রতিরোধ করে।</li>
+    <li><strong><code>host.json</code>-এ max concurrency settings</strong>: প্রতিটি instance কতগুলো message/request parallel-এ process করবে তা control করে।</li>
+    <li><strong>Downstream capacity planning</strong>: database max connections, Service Bus throughput units, external API rate limits — scaled-out Function App-এর জন্য সব size করতে হবে।</li>
+  </ul>
+
+  <hr class="section-rule" />
+
+  <div class="question-block">
+    <div class="q-label">Q48</div>
+    <div class="q-text">Function App vs Other Compute — When to Choose Functions</div>
+  </div>
+
+  <table class="compare-table">
+    <thead><tr><th>Scenario</th><th>Best Choice</th><th>Functions কেন না?</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Nightly data processing job</td>
+        <td><strong>Azure Functions (Timer Trigger)</strong></td>
+        <td>App Service ২৩ ঘণ্টা idle থাকত, পূর্ণ খরচে</td>
+      </tr>
+      <tr>
+        <td>Uploaded image process করা</td>
+        <td><strong>Azure Functions (Event Grid/Blob Trigger)</strong></td>
+        <td>Event-driven, server চালু রাখার কোনো কারণ নেই</td>
+      </tr>
+      <tr>
+        <td>High-volume always-on REST API (১০ হাজার+ req/min sustained)</td>
+        <td><strong>App Service / AKS</strong></td>
+        <td>Cold start, execution timeout, high sustained volume-এ per-request খরচ বেশি</td>
+      </tr>
+      <tr>
+        <td>Stateful multi-step workflow</td>
+        <td><strong>Durable Functions / Logic Apps</strong></td>
+        <td>Standard Functions stateless; complex orchestration-এ Durable Functions দরকার</td>
+      </tr>
+      <tr>
+        <td>Services reactively integrate করা (blob → DB → notification)</td>
+        <td><strong>Azure Functions</strong></td>
+        <td>এটাই Functions-এর exact use case</td>
+      </tr>
+      <tr>
+        <td>Long-running CPU-intensive batch job (১০ মিনিটের বেশি)</td>
+        <td><strong>Azure Batch / Container Apps</strong></td>
+        <td>Consumption Functions-এ ১০ মিনিট limit; batch compute-এ ভালো</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 14 -->
+
+<!-- ============================================================
+     CHAPTER 15 – FINAL REVISION QUESTION
+     ============================================================ -->
+<section class="chapter" id="ch15">
+  <div class="chapter-header">
+    <div class="ch-num">15</div>
+    <div>
+      <div class="ch-title">Final Revision Question</div>
+      <div class="ch-sub">Q49 — সম্পূর্ণ বিষয়ের One-Shot Revision</div>
+    </div>
+  </div>
+
+  <div class="question-block">
+    <div class="q-label">Q49</div>
+    <div class="q-text">Azure Function App — Complete One-Shot Revision</div>
+  </div>
+
+  <p>Interview-এর আগে এই question টা তোমার final mental sweep হিসেবে ব্যবহার করো। এখানে সম্পূর্ণ mental map আছে:</p>
+
+  <div class="diagram">
+    <div class="diagram-title">Complete Azure Function App Mental Map</div>
+    <pre>
+Azure Functions
+    │
+    ├─ What: Serverless, event-driven, pay-per-use, auto-scaling compute
+    │
+    ├─ Function App vs Function
+    │   Function App = deployment unit, shared config/identity/plan
+    │   Function     = one trigger, one job, one method
+    │
+    ├─ Triggers (Ch02)
+    │   HTTP     → REST APIs, webhooks (sync response)
+    │   Timer    → scheduled jobs (NCRONTAB 6-part)
+    │   Blob     → file processing (real-time-এর জন্য Event Grid ব্যবহার করো)
+    │   Queue    → background processing, decoupling
+    │   SvcBus   → enterprise messaging, topics, subscriptions
+    │   EventGrid → Azure resource event-এ react করো
+    │   EventHub  → high-volume telemetry/streaming
+    │
+    ├─ .NET Isolated Worker (Ch03)
+    │   Program.cs → HostBuilder → ConfigureFunctionsWorkerDefaults + ConfigureServices
+    │   Function class → [Function("Name")] → constructor injection → thin method
+    │   Middleware → IFunctionsWorkerMiddleware → সব invocation wrap করে
+    │   DI lifetimes: Singleton (per process), Scoped (per invocation), Transient
+    │
+    ├─ Configuration (Ch04)
+    │   Local:  local.settings.json (কখনো deploy হয় না, gitignore-এ)
+    │   Azure:  App Settings = environment variables
+    │   Pattern: App__Key (env var) → App.Key (IConfiguration) → AppOptions (typed)
+    │
+    ├─ Identity &amp; Secrets (Ch05)
+    │   Managed Identity → কোনো password নেই
+    │   DefaultAzureCredential → locally VS/CLI, Azure-এ Managed Identity
+    │   RBAC roles → প্রতিটি target resource-এ assign করতে হবে
+    │   Key Vault → secrets store করো, App Settings-এ reference করো
+    │
+    ├─ Security (Ch06)
+    │   CORS → browser-only, per environment configure করো, prod-এ wildcard নেই
+    │   Auth → Function Key (simple) অথবা Entra ID JWT (production)
+    │
+    ├─ Hosting &amp; Scaling (Ch07)
+    │   Consumption → pay-per-use, cold start, ১০ মিনিট limit
+    │   Premium     → pre-warmed, cold start নেই, VNet, বেশি খরচ
+    │   Dedicated   → সবসময় চলে, fixed cost, full control
+    │   Scale-out: বেশি instance | Concurrency: instance-এ parallel
+    │   Singleton: per process (instances-এ shared নয়)
+    │   কখনো memory-তে state রেখো না
+    │
+    ├─ Networking (Ch08)
+    │   Inbound: Access Restrictions (IP rules) | Private Endpoint (public নেই)
+    │   Outbound: VNet Integration → private resources reach করো
+    │   Full private: Private Endpoint + VNet Integration + Private DNS Zones
+    │
+    ├─ Observability (Ch09)
+    │   ILogger structured logging → Application Insights
+    │   CorrelationId প্রতি request-এ, সব call-এ propagated
+    │   App Insights: requests, dependencies, exceptions, custom metrics
+    │
+    └─ Deployment (Ch10-11)
+        dotnet publish → az/func deploy
+        প্রতি environment-এ App Settings
+        Key Vault references দিয়ে Secrets
+        Deployment Slots → staging → swap → instant rollback
+    </pre>
+  </div>
+
+  <div class="revision-box">
+    <h4>⚡ Final One-Shot Revision Points</h4>
+    <ul>
+      <li>Function App = container। Function = individual trigger+handler। প্রতি Function-এ একটি trigger।</li>
+      <li>Isolated Worker = আলাদা process। <code>Program.cs</code> = composition root। Host-এর সাথে gRPC।</li>
+      <li>Singleton প্রতি worker process-এ। Scoped প্রতি invocation-এ। Scale-out → প্রতিটি instance-এর নিজস্ব।</li>
+      <li>Code-এ কোনো secret নেই। Prod-এ <code>DefaultAzureCredential</code> → Managed Identity। Secret-এর জন্য Key Vault।</li>
+      <li>CORS = browser-only enforcement। Exact origins configure করো। Preflight = OPTIONS request।</li>
+      <li>Premium = cold start নেই, VNet, দীর্ঘ execution। Consumption = সস্তা, cold start সম্ভব।</li>
+      <li>Networking: VNet Integration = outbound। Private Endpoint = inbound। Full private-এর জন্য দুটোই।</li>
+      <li>Structured logging + App Insights + CorrelationId = production observability।</li>
+      <li>Deployment Slots = zero-downtime deploy + instant rollback।</li>
+      <li>কখনো memory-তে state রেখো না। Redis, Cosmos DB, Table Storage ব্যবহার করো।</li>
+    </ul>
+  </div>
+  <a href="#top" class="back-to-top">↑ Back to Top</a>
+</section>
+<!-- END CHAPTER 15 -->
+
+<!-- ============================================================
+     NIGHT-BEFORE INTERVIEW REVISION (বাংলা)
+     ============================================================ -->
+<section id="nbr">
+<div class="nbr-section">
+  <h2>🌙 Interview-এর আগের রাতের Revision</h2>
+  <p>এই section পুনরায় শেখানোর জন্য নয়। এটা তোমার final rapid-fire sweep। Interview-এর আগের রাতে এটা পড়ো — কোনো কিছুই তোমাকে অবাক করতে পারবে না।</p>
+
+  <div class="revision-box">
+    <h4>১০ মিনিটের Rapid Sweep — Core Concepts</h4>
+    <ul>
+      <li><strong>Function App</strong> = deployment unit, shared config/identity। <strong>Function</strong> = একটি trigger, একটি কাজ।</li>
+      <li><strong>প্রতি Function-এ একটি trigger</strong> — কঠোর নিয়ম। কোনো ব্যতিক্রম নেই।</li>
+      <li><strong>Isolated Worker</strong> = আলাদা process। <code>Program.cs</code> = তোমার DI + middleware entry point। Functions host-এর সাথে gRPC।</li>
+      <li><strong>Singleton</strong> = প্রতি worker PROCESS-এ একটি (globally নয়)। <strong>Scoped</strong> = প্রতি invocation-এ একটি। <strong>Transient</strong> = প্রতিবার নতুন।</li>
+      <li><strong>DefaultAzureCredential</strong> locally VS/CLI try করে → Azure-এ Managed Identity। সর্বত্র একই code।</li>
+      <li><strong>RBAC assignment আবশ্যক</strong> — Managed Identity automatically কোনো access দেয় না।</li>
+      <li><strong>CORS</strong> = browser-only security। Postman ignore করে। Exact origins configure করো। Prod-এ <code>*</code> নয়।</li>
+      <li><strong>Consumption cold start</strong>: ১-৫ সেকেন্ড। Premium pre-warmed = cold start নেই। Consumption সর্বোচ্চ ১০ মিনিট execution।</li>
+      <li><strong>VNet Integration</strong> = outbound। <strong>Private Endpoint</strong> = inbound। Full private setup-এ দুটোই দরকার।</li>
+      <li><strong>App Settings</strong> = Azure-এ env vars। <code>App__Key</code> format = Options pattern-এর hierarchical config।</li>
+      <li><strong>Memory-তে state কখনো নয়</strong>। Scale-out আলাদা memory সহ multiple instance তৈরি করে।</li>
+      <li><strong>Key Vault References</strong>: App Settings value = <code>@Microsoft.KeyVault(SecretUri=...)</code> — Azure runtime resolve করে। Code পরিবর্তন লাগে না।</li>
+    </ul>
+  </div>
+
+  <h3>Critical Code Patterns</h3>
+
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">Program.cs — Standard Pattern</span>
+      <span class="lang-badge">C#</span>
+    </div>
+    <pre><code><span class="kw">var</span> <span class="vr">host</span> = <span class="kw">new</span> <span class="tp">HostBuilder</span>()
+    .<span class="mt">ConfigureFunctionsWorkerDefaults</span>(<span class="vr">app</span> => <span class="vr">app</span>.<span class="mt">UseMiddleware</span>&lt;<span class="tp">ExceptionHandlingMiddleware</span>&gt;())
+    .<span class="mt">ConfigureServices</span>((<span class="vr">ctx</span>, <span class="vr">svc</span>) => {
+        <span class="vr">svc</span>.<span class="mt">Configure</span>&lt;<span class="tp">AppOptions</span>&gt;(<span class="vr">ctx</span>.Configuration.<span class="mt">GetSection</span>(<span class="st">"App"</span>));
+        <span class="vr">svc</span>.<span class="mt">AddScoped</span>&lt;<span class="tp">IOrderService</span>, <span class="tp">OrderService</span>&gt;();
+        <span class="vr">svc</span>.<span class="mt">AddSingleton</span>(<span class="vr">_</span> => <span class="kw">new</span> <span class="tp">BlobServiceClient</span>(<span class="kw">new</span> <span class="tp">Uri</span>(<span class="st">"..."</span>), <span class="kw">new</span> <span class="tp">DefaultAzureCredential</span>()));
+        <span class="vr">svc</span>.<span class="mt">AddApplicationInsightsTelemetryWorkerService</span>();
+        <span class="vr">svc</span>.<span class="mt">ConfigureFunctionsApplicationInsights</span>();
+    }).<span class="mt">Build</span>();
+<span class="kw">await</span> <span class="vr">host</span>.<span class="mt">RunAsync</span>();</code></pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-block-header">
+      <span class="file-name">HTTP Function — Standard Pattern</span>
+      <span class="lang-badge">C#</span>
+    </div>
+    <pre><code>[<span class="at">Function</span>(<span class="st">"GetOrder"</span>)]
+<span class="kw">public async</span> <span class="tp">Task</span>&lt;<span class="tp">HttpResponseData</span>&gt; <span class="mt">Run</span>(
+    [<span class="at">HttpTrigger</span>(<span class="tp">AuthorizationLevel</span>.Function, <span class="st">"get"</span>, Route = <span class="st">"orders/{id}"</span>)]
+    <span class="tp">HttpRequestData</span> <span class="vr">req</span>, <span class="tp">string</span> <span class="vr">id</span>)
+{
+    <span class="kw">var</span> <span class="vr">order</span> = <span class="kw">await</span> <span class="vr">_orderService</span>.<span class="mt">GetByIdAsync</span>(<span class="vr">id</span>);
+    <span class="kw">var</span> <span class="vr">res</span> = <span class="vr">req</span>.<span class="mt">CreateResponse</span>(<span class="vr">order</span> != <span class="kw">null</span> ? <span class="tp">HttpStatusCode</span>.OK : <span class="tp">HttpStatusCode</span>.NotFound);
+    <span class="kw">if</span> (<span class="vr">order</span> != <span class="kw">null</span>) <span class="kw">await</span> <span class="vr">res</span>.<span class="mt">WriteAsJsonAsync</span>(<span class="vr">order</span>);
+    <span class="kw">return</span> <span class="vr">res</span>;
+}</code></pre>
+  </div>
+
+  <h3>Top Interview Traps — এগুলো ভালো করে জানো</h3>
+  <table class="compare-table">
+    <thead><tr><th>Trap</th><th>ভুল উত্তর</th><th>সঠিক উত্তর</th></tr></thead>
+    <tbody>
+      <tr><td>Function-এ কি multiple trigger হতে পারে?</td><td>হ্যাঁ</td><td>না — প্রতি Function-এ ঠিক একটি trigger</td></tr>
+      <tr><td>Singleton কি সব scaled-out instance-এ shared?</td><td>হ্যাঁ, এটা Singleton</td><td>না — প্রতি worker PROCESS-এ একটি। ৫টি instance = ৫টি Singleton।</td></tr>
+      <tr><td>Managed Identity কি locally কাজ করে?</td><td>হ্যাঁ</td><td>না — IMDS দরকার (শুধু Azure-এ)। DefaultAzureCredential VS/CLI-তে fall back করে।</td></tr>
+      <tr><td>CORS কি Postman call-কে affect করে?</td><td>হ্যাঁ</td><td>না — CORS browser-only। Postman SOP enforce করে না।</td></tr>
+      <tr><td>Real-time-এর জন্য Blob Trigger?</td><td>হ্যাঁ, Blob Trigger ব্যবহার করো</td><td>না — ১০ মিনিট polling delay। Real-time-এর জন্য Event Grid Trigger।</td></tr>
+      <tr><td>Singleton-এ session state রাখা যাবে?</td><td>হ্যাঁ, এটা দীর্ঘস্থায়ী</td><td>না — restart-এ হারিয়ে যায়, instances-এ shared নয়</td></tr>
+      <tr><td>Managed Identity কি automatically access দেয়?</td><td>হ্যাঁ</td><td>না — প্রতিটি target resource-এ RBAC roles assign করতে হবে</td></tr>
+      <tr><td>VNet Integration কি Function-কে private করে?</td><td>হ্যাঁ</td><td>না — শুধু OUTBOUND control করে। INBOUND-এর জন্য Private Endpoint দরকার।</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Security Checklist</h3>
+  <div class="revision-box">
+    <h4>Production-এ যাওয়ার আগে:</h4>
+    <ul>
+      <li>☐ Code বা git history-তে কোনো hardcoded secret নেই</li>
+      <li>☐ App Settings-এ কোনো plain-text secret নেই</li>
+      <li>☐ সব sensitive value-এর জন্য Key Vault references ব্যবহার করা হয়েছে</li>
+      <li>☐ System-assigned Managed Identity enabled</li>
+      <li>☐ Minimum RBAC roles assigned (principle of least privilege)</li>
+      <li>☐ CORS: wildcard নেই, শুধু exact origins</li>
+      <li>☐ HTTP Functions: sensitive endpoint-এ Anonymous নয় (appropriate AuthorizationLevel)</li>
+      <li>☐ Access Restrictions বা Private Endpoint configured</li>
+      <li>☐ Private resources access করলে VNet Integration আছে</li>
+    </ul>
+  </div>
+
+  <h3>Troubleshooting Checklist — Locally কাজ করে, Azure-এ Fail করে</h3>
+  <div class="revision-box">
+    <h4>এই ক্রমে check করো:</h4>
+    <ul>
+      <li>☐ App Setting: Azure-এ key কি সঠিক নাম ও value দিয়ে আছে?</li>
+      <li>☐ Identity: Managed Identity-এর কি প্রয়োজনীয় RBAC role আছে?</li>
+      <li>☐ Networking: VNet Integration configured? Private DNS Zones সঠিকভাবে resolve হচ্ছে?</li>
+      <li>☐ Runtime: সঠিক .NET version এবং FUNCTIONS_WORKER_RUNTIME set?</li>
+      <li>☐ Application Insights: exceptions blade-এ actual error message দেখো</li>
+    </ul>
+  </div>
+
+  <h3>একটিমাত্র Architecture যা অবশ্যই জানতে হবে</h3>
+  <div class="diagram">
+    <div class="diagram-title">Production Enterprise Function App — একটি Diagram-এ</div>
+    <pre>
+Client ──► [Entra ID JWT] ──► Function App (Premium, VNet Integrated)
+                                      │
+                     ┌────────────────┼────────────────┐
+                ExceptionMiddleware  DI            CorrelationId
+                                      │
+                               Service Layer
+                                      │
+                            Repository/Client Layer
+                                      │
+          ┌───────────────────────────┼───────────────────────┐
+        SQL DB                   Service Bus              Key Vault
+      (Private EP)              (Private EP)            (Private EP)
+          │                          │                       │
+          └──────────── সবই Managed Identity + RBAC দিয়ে ────┘
+          │
+Application Insights ── Structured Logs + CorrelationId + Alerts
+          │
+GitHub Actions ── Staging Slot ── Swap ── Production Slot
+    </pre>
+  </div>
+
+  <h3>Rapid-Fire Q&amp;A</h3>
+  <table class="compare-table">
+    <thead><tr><th>প্রশ্ন</th><th>উত্তর</th></tr></thead>
+    <tbody>
+      <tr><td>DI registration কোথায় হয়?</td><td><code>Program.cs</code> — startup-এ একবার</td></tr>
+      <tr><td>FunctionContext কী?</td><td>Per-invocation context: InvocationId, FunctionDefinition, InstanceServices</td></tr>
+      <tr><td>Isolated Worker-এ HTTP কোন type handle করে?</td><td><code>HttpRequestData</code> এবং <code>HttpResponseData</code></td></tr>
+      <tr><td>Request body কীভাবে পড়বে?</td><td><code>await req.ReadAsStringAsync()</code></td></tr>
+      <tr><td>JSON response কীভাবে লিখবে?</td><td><code>await response.WriteAsJsonAsync(obj)</code></td></tr>
+      <tr><td>NCRONTAB কী?</td><td>৬-part cron format: <code>{sec} {min} {hr} {day} {month} {dow}</code></td></tr>
+      <tr><td>TimerTrigger-এ IsPastDue মানে কী?</td><td>Scheduled execution miss হয়েছে — timer দেরিতে fire করেছে</td></tr>
+      <tr><td>Queue exception → message-এর কী হয়?</td><td>Retry-এর জন্য queue-এ ফিরে যায়। Max retry-এর পরে → poison queue।</td></tr>
+      <tr><td><code>App__Key</code>-তে <code>__</code> কী?</td><td>Env var-এ hierarchy separator → nested config <code>App.Key</code>-তে map হয়</td></tr>
+      <tr><td>Key Vault Reference কী?</td><td>App Setting value = <code>@Microsoft.KeyVault(SecretUri=...)</code> — Azure runtime resolve করে</td></tr>
+      <tr><td>Blob Trigger ও Event Grid Trigger-এর পার্থক্য?</td><td>Blob Trigger poll করে (১০ মিনিট পর্যন্ত delay)। Event Grid push করে (milliseconds)।</td></tr>
+      <tr><td>Premium plan-এর মূল সুবিধা?</td><td>Pre-warmed instances (cold start নেই) + full VNet Integration</td></tr>
+    </tbody>
+  </table>
+
+  <p style="text-align:center; margin-top:32px; opacity:0.8; font-size:0.9rem;">শুভকামনা! তুমি সব কিছু cover করেছো। তোমার preparation-এ বিশ্বাস রাখো। 💙</p>
+</div>
+</section>
+<!-- END NIGHT-BEFORE REVISION -->
+
+</div><!-- end .page-wrapper -->
+</body>
+</html>

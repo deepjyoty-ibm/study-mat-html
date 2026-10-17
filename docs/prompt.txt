@@ -1,0 +1,25 @@
+THE ENTIRE QUESTION LIST Filename : Azure-Function-App-Master-Question-List.md
+Perform the operation which is mentioned in instructions.md
+All the html folder structure I already created inside study-html folder.
+Perform it..
+
+By the way. Write the css with based on theme..
+You may write different different theme later.
+For now , use Blue theme only...
+But keep in mind, write the css with some flexible manner...
+
+I want the complete Notes html for All the chapters in a single html file.
+
+ekta ekta kre chapter nao.. Html lekho..
+Jakhn html likhbe, ekta English and ekta Bengali dutotei likhbe..
+Ota hole, then next chapter question nao.. Html e append kro.. evabe kro. Tar age css js plugin etc ja ja lage sob render kre nao
+
+
+
+Ebar amr katha ta mon die sono...
+Ami kano Bengali er katha bollam????
+Actually I am bengali. Ami eta ei karonei chaichi., jate ek jhotkai puro page ta bujhe felte pari ek lekha ta porei.. Bujhle???
+
+Question ta English tei rakho..
+But answer gulo Bang reji te kro.. I mean important term esob english e lekho.. sentance ta bengali te lekho.
+

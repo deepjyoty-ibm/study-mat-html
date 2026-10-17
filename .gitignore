@@ -1,0 +1,24 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.code-workspace
+.idea/
+
+# Azure Functions local config — NEVER commit
+local.settings.json
+
+# Build / publish output
+publish/
+bin/
+obj/
+*.zip
+
+# Node (if ever added)
+node_modules/
+
+# Logs
+*.log
